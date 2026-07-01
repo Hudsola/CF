@@ -13,17 +13,19 @@ public class DatabaseManager {
     public static void inicializar() {
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
 
+            // COLLATE NOCASE garante que "Nubank" e "nubank" sejam tratados
+            // como o mesmo valor pela constraint UNIQUE (case-insensitive).
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS categorias (
                     id   INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nome TEXT NOT NULL UNIQUE
+                    nome TEXT NOT NULL UNIQUE COLLATE NOCASE
                 )
             """);
 
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS contas (
                     id   INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nome TEXT NOT NULL UNIQUE
+                    nome TEXT NOT NULL UNIQUE COLLATE NOCASE
                 )
             """);
 

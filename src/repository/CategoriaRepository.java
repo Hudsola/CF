@@ -10,6 +10,7 @@ import java.util.List;
 public class CategoriaRepository {
 
     public void salvar(Categoria c) {
+        verificarDuplicado(c.getNome(), null);
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement("INSERT INTO categorias (nome) VALUES (?)")) {
             ps.setString(1, c.getNome());
@@ -18,6 +19,20 @@ public class CategoriaRepository {
             if (e.getMessage().contains("UNIQUE"))
                 throw new RuntimeException("Já existe uma categoria com o nome \"" + c.getNome() + "\".");
             throw new RuntimeException("Erro ao salvar categoria: " + e.getMessage(), e);
+        }
+    }
+
+    public void atualizar(Categoria c) {
+        verificarDuplicado(c.getNome(), c.getId());
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement("UPDATE categorias SET nome = ? WHERE id = ?")) {
+            ps.setString(1, c.getNome());
+            ps.setInt(2, c.getId());
+            if (ps.executeUpdate() == 0) throw new RuntimeException("Categoria não encontrada com ID " + c.getId());
+        } catch (SQLException e) {
+            if (e.getMessage().contains("UNIQUE"))
+                throw new RuntimeException("Já existe uma categoria com o nome \"" + c.getNome() + "\".");
+            throw new RuntimeException("Erro ao atualizar categoria: " + e.getMessage(), e);
         }
     }
 
@@ -46,6 +61,30 @@ public class CategoriaRepository {
             if (del.executeUpdate() == 0) throw new RuntimeException("Categoria não encontrada com ID " + id);
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao excluir categoria: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Verifica se já existe uma categoria com o mesmo nome (case-insensitive),
+     * ignorando o próprio registro quando for uma atualização (idExcluir != null).
+     * Esta é uma camada de proteção adicional à constraint UNIQUE COLLATE NOCASE
+     * do banco — permite dar uma mensagem de erro amigável antes do INSERT/UPDATE.
+     */
+    private void verificarDuplicado(String nome, Integer idExcluir) {
+        String sql = "SELECT id, nome FROM categorias WHERE nome = ? COLLATE NOCASE";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, nome);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                int idEncontrado = rs.getInt("id");
+                if (idExcluir == null || idEncontrado != idExcluir) {
+                    throw new RuntimeException("Já existe uma categoria chamada \"" + rs.getString("nome")
+                            + "\" (você digitou \"" + nome + "\").");
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao verificar duplicidade: " + e.getMessage(), e);
         }
     }
 }

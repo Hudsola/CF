@@ -33,12 +33,29 @@ public class LancamentoFixoRepository {
         }
     }
 
+    public void atualizar(LancamentoFixo lf) {
+        String sql = "UPDATE lancamentos_fixos SET tipo=?, descricao=?, categoria_id=?, valor=?, conta_id=?, dia_vencimento=? WHERE id=?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, lf.getTipo().name());
+            ps.setString(2, lf.getDescricao());
+            ps.setInt(3, lf.getCategoriaId());
+            ps.setDouble(4, lf.getValor());
+            ps.setInt(5, lf.getContaId());
+            ps.setInt(6, lf.getDiaVencimento());
+            ps.setInt(7, lf.getId());
+            if (ps.executeUpdate() == 0) throw new RuntimeException("Lançamento fixo não encontrado com ID " + lf.getId());
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao atualizar lançamento fixo: " + e.getMessage(), e);
+        }
+    }
+
     public List<LancamentoFixo> listarTodos() {
-        return query(SELECT_BASE + "ORDER BY lf.tipo, lf.descricao", false);
+        return query(SELECT_BASE + "ORDER BY lf.tipo, lf.descricao");
     }
 
     public List<LancamentoFixo> listarAtivos() {
-        return query(SELECT_BASE + "WHERE lf.ativo = 1 ORDER BY lf.tipo, lf.descricao", false);
+        return query(SELECT_BASE + "WHERE lf.ativo = 1 ORDER BY lf.tipo, lf.descricao");
     }
 
     public void alternarAtivo(int id) {
@@ -87,7 +104,7 @@ public class LancamentoFixoRepository {
         }
     }
 
-    private List<LancamentoFixo> query(String sql, boolean ignored) {
+    private List<LancamentoFixo> query(String sql) {
         List<LancamentoFixo> lista = new ArrayList<>();
         try (Connection conn = DatabaseManager.getConnection();
              ResultSet rs = conn.createStatement().executeQuery(sql)) {

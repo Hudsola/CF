@@ -34,6 +34,24 @@ public class DespesaRepository {
         }
     }
 
+    public void atualizar(Despesa d) {
+        String sql = "UPDATE despesas SET categoria_id=?, detalhamento=?, valor=?, conta_id=?, data=?, mes=?, ano=? WHERE id=?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, d.getCategoriaId());
+            ps.setString(2, d.getDetalhamento());
+            ps.setDouble(3, d.getValor());
+            ps.setInt(4, d.getContaId());
+            ps.setString(5, d.getData().toString());
+            ps.setString(6, d.getMes());
+            ps.setInt(7, d.getAno());
+            ps.setInt(8, d.getId());
+            if (ps.executeUpdate() == 0) throw new RuntimeException("Despesa não encontrada com ID " + d.getId());
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao atualizar despesa: " + e.getMessage(), e);
+        }
+    }
+
     public List<Despesa> listarTodos() {
         return query(SELECT_BASE + "ORDER BY d.data", null);
     }
