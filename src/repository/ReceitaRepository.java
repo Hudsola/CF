@@ -30,6 +30,23 @@ public class ReceitaRepository {
         }
     }
 
+    public void atualizar(Receita r) {
+        String sql = "UPDATE receitas SET origem=?, valor=?, conta_id=?, data=?, mes=?, ano=? WHERE id=?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, r.getOrigem());
+            ps.setDouble(2, r.getValor());
+            ps.setInt(3, r.getContaId());
+            ps.setString(4, r.getData().toString());
+            ps.setString(5, r.getMes());
+            ps.setInt(6, r.getAno());
+            ps.setInt(7, r.getId());
+            if (ps.executeUpdate() == 0) throw new RuntimeException("Receita não encontrada com ID " + r.getId());
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao atualizar receita: " + e.getMessage(), e);
+        }
+    }
+
     public List<Receita> listarTodos() {
         return query(SELECT_BASE + "ORDER BY r.data", null);
     }

@@ -1,0 +1,29 @@
+# Banco de dados SQLite gerado em tempo de execução
+*.db
+*.db-shm
+*.db-wal
+
+# Arquivos compilados
+out/
+*.class
+
+# Driver SQLite (baixado manualmente, não versionado)
+lib/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+*.project
+*.classpath
+.settings/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log

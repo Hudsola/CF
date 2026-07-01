@@ -59,8 +59,8 @@ public class Main {
 
     static void menuCategorias() {
         System.out.println("\n─── CATEGORIAS ───");
-        System.out.println(" 1. Adicionar  2. Listar  3. Excluir  0. Voltar");
-        int op = iv.lerIntNoIntervalo("Opção", 0, 3);
+        System.out.println(" 1. Adicionar  2. Listar  3. Editar  4. Excluir  0. Voltar");
+        int op = iv.lerIntNoIntervalo("Opção", 0, 4);
         switch (op) {
             case 1 -> {
                 do {
@@ -74,7 +74,8 @@ public class Main {
                 } while (iv.confirmar("Deseja cadastrar outra categoria?"));
             }
             case 2 -> listarCategorias();
-            case 3 -> {
+            case 3 -> editarCategoria();
+            case 4 -> {
                 listarCategorias();
                 if (cf.getCategorias().isEmpty()) return;
                 int id = iv.lerInt("ID da categoria a excluir (0 para cancelar)");
@@ -93,14 +94,32 @@ public class Main {
         lista.forEach(System.out::println);
     }
 
+    static void editarCategoria() {
+        listarCategorias();
+        List<Categoria> lista = cf.getCategorias();
+        if (lista.isEmpty()) return;
+        int id = iv.lerInt("ID da categoria a editar (0 para cancelar)");
+        if (id == 0) return;
+        Categoria atual = lista.stream().filter(c -> c.getId() == id).findFirst().orElse(null);
+        if (atual == null) { System.out.println("  ✖ Categoria não encontrada."); return; }
+
+        String nome = iv.lerTextoComPadrao("Nome", atual.getNome());
+        try {
+            cf.atualizarCategoria(new Categoria(id, nome));
+            System.out.println("✔ Categoria atualizada!");
+        } catch (RuntimeException e) {
+            System.out.println("  ✖ " + e.getMessage());
+        }
+    }
+
     // =========================================================================
     // CONTAS
     // =========================================================================
 
     static void menuContas() {
         System.out.println("\n─── CONTAS ───");
-        System.out.println(" 1. Adicionar  2. Listar  3. Excluir  0. Voltar");
-        int op = iv.lerIntNoIntervalo("Opção", 0, 3);
+        System.out.println(" 1. Adicionar  2. Listar  3. Editar  4. Excluir  0. Voltar");
+        int op = iv.lerIntNoIntervalo("Opção", 0, 4);
         switch (op) {
             case 1 -> {
                 do {
@@ -114,7 +133,8 @@ public class Main {
                 } while (iv.confirmar("Deseja cadastrar outra conta?"));
             }
             case 2 -> listarContas();
-            case 3 -> {
+            case 3 -> editarConta();
+            case 4 -> {
                 listarContas();
                 if (cf.getContas().isEmpty()) return;
                 int id = iv.lerInt("ID da conta a excluir (0 para cancelar)");
@@ -133,14 +153,32 @@ public class Main {
         lista.forEach(System.out::println);
     }
 
+    static void editarConta() {
+        listarContas();
+        List<Conta> lista = cf.getContas();
+        if (lista.isEmpty()) return;
+        int id = iv.lerInt("ID da conta a editar (0 para cancelar)");
+        if (id == 0) return;
+        Conta atual = lista.stream().filter(c -> c.getId() == id).findFirst().orElse(null);
+        if (atual == null) { System.out.println("  ✖ Conta não encontrada."); return; }
+
+        String nome = iv.lerTextoComPadrao("Nome", atual.getNome());
+        try {
+            cf.atualizarConta(new Conta(id, nome));
+            System.out.println("✔ Conta atualizada!");
+        } catch (RuntimeException e) {
+            System.out.println("  ✖ " + e.getMessage());
+        }
+    }
+
     // =========================================================================
     // RECEITAS
     // =========================================================================
 
     static void menuReceitas() {
         System.out.println("\n─── RECEITAS ───");
-        System.out.println(" 1. Adicionar  2. Listar  3. Excluir  0. Voltar");
-        int op = iv.lerIntNoIntervalo("Opção", 0, 3);
+        System.out.println(" 1. Adicionar  2. Listar  3. Editar  4. Excluir  0. Voltar");
+        int op = iv.lerIntNoIntervalo("Opção", 0, 4);
         switch (op) {
             case 1 -> {
                 try {
@@ -148,7 +186,8 @@ public class Main {
                 } catch (IllegalStateException e) { System.out.println("  ✖ " + e.getMessage()); }
             }
             case 2 -> listarReceitas();
-            case 3 -> excluirReceita();
+            case 3 -> editarReceita();
+            case 4 -> excluirReceita();
         }
     }
 
@@ -170,6 +209,33 @@ public class Main {
         lista.forEach(System.out::println);
     }
 
+    static void editarReceita() {
+        listarReceitas();
+        List<Receita> lista = cf.getReceitas();
+        if (lista.isEmpty()) return;
+        int id = iv.lerInt("ID da receita a editar (0 para cancelar)");
+        if (id == 0) return;
+        Receita atual = lista.stream().filter(r -> r.getId() == id).findFirst().orElse(null);
+        if (atual == null) { System.out.println("  ✖ Receita não encontrada."); return; }
+
+        System.out.println("\nEditando receita: " + atual);
+        String origem  = iv.lerTextoComPadrao("Descrição/Origem", atual.getOrigem());
+        double valor   = iv.lerValorComPadrao("Valor", atual.getValor());
+        Conta contaAtualObj = cf.getContas().stream()
+                .filter(c -> c.getId() == atual.getContaId()).findFirst()
+                .orElse(new Conta(atual.getContaId(), atual.getContaNome()));
+        Conta conta    = iv.selecionarContaComPadrao(cf.getContas(), contaAtualObj);
+        LocalDate data = iv.lerDataComPadrao("Data", atual.getData());
+        String mes     = nomeMes(data);
+
+        try {
+            cf.atualizarReceita(new Receita(id, origem, valor, conta.getId(), conta.getNome(), data, mes, data.getYear()));
+            System.out.println("✔ Receita atualizada!");
+        } catch (RuntimeException e) {
+            System.out.println("  ✖ " + e.getMessage());
+        }
+    }
+
     static void excluirReceita() {
         listarReceitas();
         if (cf.getReceitas().isEmpty()) return;
@@ -186,8 +252,8 @@ public class Main {
 
     static void menuDespesas() {
         System.out.println("\n─── DESPESAS ───");
-        System.out.println(" 1. Adicionar  2. Listar  3. Excluir  0. Voltar");
-        int op = iv.lerIntNoIntervalo("Opção", 0, 3);
+        System.out.println(" 1. Adicionar  2. Listar  3. Editar  4. Excluir  0. Voltar");
+        int op = iv.lerIntNoIntervalo("Opção", 0, 4);
         switch (op) {
             case 1 -> {
                 try {
@@ -195,7 +261,8 @@ public class Main {
                 } catch (IllegalStateException e) { System.out.println("  ✖ " + e.getMessage()); }
             }
             case 2 -> listarDespesas();
-            case 3 -> excluirDespesa();
+            case 3 -> editarDespesa();
+            case 4 -> excluirDespesa();
         }
     }
 
@@ -219,6 +286,38 @@ public class Main {
         lista.forEach(System.out::println);
     }
 
+    static void editarDespesa() {
+        listarDespesas();
+        List<Despesa> lista = cf.getDespesas();
+        if (lista.isEmpty()) return;
+        int id = iv.lerInt("ID da despesa a editar (0 para cancelar)");
+        if (id == 0) return;
+        Despesa atual = lista.stream().filter(d -> d.getId() == id).findFirst().orElse(null);
+        if (atual == null) { System.out.println("  ✖ Despesa não encontrada."); return; }
+
+        System.out.println("\nEditando despesa: " + atual);
+        Categoria catAtualObj = cf.getCategorias().stream()
+                .filter(c -> c.getId() == atual.getCategoriaId()).findFirst()
+                .orElse(new Categoria(atual.getCategoriaId(), atual.getCategoriaNome()));
+        Categoria cat  = iv.selecionarCategoriaComPadrao(cf.getCategorias(), catAtualObj);
+        String detalhe = iv.lerTextoComPadrao("Detalhamento", atual.getDetalhamento());
+        double valor   = iv.lerValorComPadrao("Valor", atual.getValor());
+        Conta contaAtualObj = cf.getContas().stream()
+                .filter(c -> c.getId() == atual.getContaId()).findFirst()
+                .orElse(new Conta(atual.getContaId(), atual.getContaNome()));
+        Conta conta    = iv.selecionarContaComPadrao(cf.getContas(), contaAtualObj);
+        LocalDate data = iv.lerDataComPadrao("Data", atual.getData());
+        String mes     = nomeMes(data);
+
+        try {
+            cf.atualizarDespesa(new Despesa(id, cat.getId(), cat.getNome(), detalhe, valor,
+                    conta.getId(), conta.getNome(), data, mes, data.getYear()));
+            System.out.println("✔ Despesa atualizada!");
+        } catch (RuntimeException e) {
+            System.out.println("  ✖ " + e.getMessage());
+        }
+    }
+
     static void excluirDespesa() {
         listarDespesas();
         if (cf.getDespesas().isEmpty()) return;
@@ -235,8 +334,8 @@ public class Main {
 
     static void menuInvestimentos() {
         System.out.println("\n─── INVESTIMENTOS ───");
-        System.out.println(" 1. Adicionar  2. Listar  3. Excluir  0. Voltar");
-        int op = iv.lerIntNoIntervalo("Opção", 0, 3);
+        System.out.println(" 1. Adicionar  2. Listar  3. Editar  4. Excluir  0. Voltar");
+        int op = iv.lerIntNoIntervalo("Opção", 0, 4);
         switch (op) {
             case 1 -> {
                 try {
@@ -244,7 +343,8 @@ public class Main {
                 } catch (IllegalStateException e) { System.out.println("  ✖ " + e.getMessage()); }
             }
             case 2 -> listarInvestimentos();
-            case 3 -> excluirInvestimento();
+            case 3 -> editarInvestimento();
+            case 4 -> excluirInvestimento();
         }
     }
 
@@ -266,6 +366,33 @@ public class Main {
         lista.forEach(System.out::println);
     }
 
+    static void editarInvestimento() {
+        listarInvestimentos();
+        List<Investimento> lista = cf.getInvestimentos();
+        if (lista.isEmpty()) return;
+        int id = iv.lerInt("ID do investimento a editar (0 para cancelar)");
+        if (id == 0) return;
+        Investimento atual = lista.stream().filter(i -> i.getId() == id).findFirst().orElse(null);
+        if (atual == null) { System.out.println("  ✖ Investimento não encontrado."); return; }
+
+        System.out.println("\nEditando investimento: " + atual);
+        String tipo    = iv.lerTextoComPadrao("Tipo", atual.getTipo());
+        double valor   = iv.lerValorComPadrao("Valor", atual.getValor());
+        Conta contaAtualObj = cf.getContas().stream()
+                .filter(c -> c.getId() == atual.getContaId()).findFirst()
+                .orElse(new Conta(atual.getContaId(), atual.getContaNome()));
+        Conta conta    = iv.selecionarContaComPadrao(cf.getContas(), contaAtualObj);
+        LocalDate data = iv.lerDataComPadrao("Data", atual.getData());
+        String mes     = nomeMes(data);
+
+        try {
+            cf.atualizarInvestimento(new Investimento(id, tipo, valor, conta.getId(), conta.getNome(), data, mes, data.getYear()));
+            System.out.println("✔ Investimento atualizado!");
+        } catch (RuntimeException e) {
+            System.out.println("  ✖ " + e.getMessage());
+        }
+    }
+
     static void excluirInvestimento() {
         listarInvestimentos();
         if (cf.getInvestimentos().isEmpty()) return;
@@ -282,8 +409,8 @@ public class Main {
 
     static void menuFixos() {
         System.out.println("\n─── LANÇAMENTOS FIXOS ───");
-        System.out.println(" 1. Cadastrar  2. Listar  3. Ativar/Desativar  4. Excluir  5. Aplicar em mês  0. Voltar");
-        int op = iv.lerIntNoIntervalo("Opção", 0, 5);
+        System.out.println(" 1. Cadastrar  2. Listar  3. Editar  4. Ativar/Desativar  5. Excluir  6. Aplicar em mês  0. Voltar");
+        int op = iv.lerIntNoIntervalo("Opção", 0, 6);
         switch (op) {
             case 1 -> {
                 try {
@@ -291,7 +418,8 @@ public class Main {
                 } catch (IllegalStateException e) { System.out.println("  ✖ " + e.getMessage()); }
             }
             case 2 -> listarFixos();
-            case 3 -> {
+            case 3 -> editarFixo();
+            case 4 -> {
                 listarFixos();
                 if (cf.getLancamentosFixos().isEmpty()) return;
                 int id = iv.lerInt("ID para ativar/desativar (0 para cancelar)");
@@ -300,7 +428,7 @@ public class Main {
                     catch (RuntimeException e) { System.out.println("  ✖ " + e.getMessage()); }
                 }
             }
-            case 4 -> {
+            case 5 -> {
                 listarFixos();
                 if (cf.getLancamentosFixos().isEmpty()) return;
                 int id = iv.lerInt("ID para excluir (0 para cancelar)");
@@ -309,7 +437,7 @@ public class Main {
                     catch (RuntimeException e) { System.out.println("  ✖ " + e.getMessage()); }
                 }
             }
-            case 5 -> aplicarFixosMes();
+            case 6 -> aplicarFixosMes();
         }
     }
 
@@ -336,6 +464,48 @@ public class Main {
         if (lista.isEmpty()) { System.out.println("Nenhum lançamento fixo cadastrado."); return; }
         System.out.println("\n[ Lançamentos Fixos ]");
         lista.forEach(System.out::println);
+    }
+
+    static void editarFixo() {
+        listarFixos();
+        List<LancamentoFixo> lista = cf.getLancamentosFixos();
+        if (lista.isEmpty()) return;
+        int id = iv.lerInt("ID do lançamento fixo a editar (0 para cancelar)");
+        if (id == 0) return;
+        LancamentoFixo atual = lista.stream().filter(f -> f.getId() == id).findFirst().orElse(null);
+        if (atual == null) { System.out.println("  ✖ Lançamento fixo não encontrado."); return; }
+
+        System.out.println("\nEditando: " + atual);
+        System.out.println("(O tipo RECEITA/DESPESA/INVESTIMENTO não pode ser alterado — exclua e crie outro se necessário.)");
+
+        String descricao = iv.lerTextoComPadrao("Descrição", atual.getDescricao());
+
+        int categoriaId = atual.getCategoriaId();
+        String categoriaNome = atual.getCategoriaNome();
+        if (atual.getTipo() == Tipo.DESPESA) {
+            Categoria catAtualObj = cf.getCategorias().stream()
+                    .filter(c -> c.getId() == atual.getCategoriaId()).findFirst()
+                    .orElse(new Categoria(atual.getCategoriaId(), atual.getCategoriaNome()));
+            Categoria cat = iv.selecionarCategoriaComPadrao(cf.getCategorias(), catAtualObj);
+            categoriaId = cat.getId();
+            categoriaNome = cat.getNome();
+        }
+
+        double valor = iv.lerValorComPadrao("Valor", atual.getValor());
+        Conta contaAtualObj = cf.getContas().stream()
+                .filter(c -> c.getId() == atual.getContaId()).findFirst()
+                .orElse(new Conta(atual.getContaId(), atual.getContaNome()));
+        Conta conta = iv.selecionarContaComPadrao(cf.getContas(), contaAtualObj);
+        int dia = iv.lerIntComPadrao("Dia do mês", atual.getDiaVencimento(), 1, 31);
+
+        try {
+            LancamentoFixo atualizado = new LancamentoFixo(id, atual.getTipo(), descricao,
+                    categoriaId, categoriaNome, valor, conta.getId(), conta.getNome(), dia, atual.isAtivo());
+            cf.atualizarLancamentoFixo(atualizado);
+            System.out.println("✔ Lançamento fixo atualizado!");
+        } catch (RuntimeException e) {
+            System.out.println("  ✖ " + e.getMessage());
+        }
     }
 
     static void aplicarFixosMes() {

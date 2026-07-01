@@ -30,6 +30,23 @@ public class InvestimentoRepository {
         }
     }
 
+    public void atualizar(Investimento i) {
+        String sql = "UPDATE investimentos SET tipo=?, valor=?, conta_id=?, data=?, mes=?, ano=? WHERE id=?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, i.getTipo());
+            ps.setDouble(2, i.getValor());
+            ps.setInt(3, i.getContaId());
+            ps.setString(4, i.getData().toString());
+            ps.setString(5, i.getMes());
+            ps.setInt(6, i.getAno());
+            ps.setInt(7, i.getId());
+            if (ps.executeUpdate() == 0) throw new RuntimeException("Investimento não encontrado com ID " + i.getId());
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao atualizar investimento: " + e.getMessage(), e);
+        }
+    }
+
     public List<Investimento> listarTodos() {
         return query(SELECT_BASE + "ORDER BY i.data", null);
     }

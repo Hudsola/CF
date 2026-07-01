@@ -23,35 +23,41 @@ public class ControleFinanceiro {
     private final LancamentoFixoRepository fixoRepo     = new LancamentoFixoRepository();
 
     // --- Categorias ---
-    public void salvarCategoria(Categoria c)   { categoriaRepo.salvar(c); }
-    public void excluirCategoria(int id)       { categoriaRepo.excluir(id); }
-    public List<Categoria> getCategorias()     { return categoriaRepo.listarTodos(); }
+    public void salvarCategoria(Categoria c)     { categoriaRepo.salvar(c); }
+    public void atualizarCategoria(Categoria c)  { categoriaRepo.atualizar(c); }
+    public void excluirCategoria(int id)         { categoriaRepo.excluir(id); }
+    public List<Categoria> getCategorias()       { return categoriaRepo.listarTodos(); }
 
     // --- Contas ---
-    public void salvarConta(Conta c)           { contaRepo.salvar(c); }
-    public void excluirConta(int id)           { contaRepo.excluir(id); }
-    public List<Conta> getContas()             { return contaRepo.listarTodos(); }
+    public void salvarConta(Conta c)             { contaRepo.salvar(c); }
+    public void atualizarConta(Conta c)          { contaRepo.atualizar(c); }
+    public void excluirConta(int id)             { contaRepo.excluir(id); }
+    public List<Conta> getContas()               { return contaRepo.listarTodos(); }
 
     // --- Receitas ---
-    public void salvarReceita(Receita r)       { receitaRepo.salvar(r); }
-    public void excluirReceita(int id)         { receitaRepo.excluir(id); }
-    public List<Receita> getReceitas()         { return receitaRepo.listarTodos(); }
+    public void salvarReceita(Receita r)         { receitaRepo.salvar(r); }
+    public void atualizarReceita(Receita r)      { receitaRepo.atualizar(r); }
+    public void excluirReceita(int id)           { receitaRepo.excluir(id); }
+    public List<Receita> getReceitas()           { return receitaRepo.listarTodos(); }
 
     // --- Despesas ---
-    public void salvarDespesa(Despesa d)       { despesaRepo.salvar(d); }
-    public void excluirDespesa(int id)         { despesaRepo.excluir(id); }
-    public List<Despesa> getDespesas()         { return despesaRepo.listarTodos(); }
+    public void salvarDespesa(Despesa d)         { despesaRepo.salvar(d); }
+    public void atualizarDespesa(Despesa d)      { despesaRepo.atualizar(d); }
+    public void excluirDespesa(int id)           { despesaRepo.excluir(id); }
+    public List<Despesa> getDespesas()           { return despesaRepo.listarTodos(); }
 
     // --- Investimentos ---
-    public void salvarInvestimento(Investimento i) { investRepo.salvar(i); }
-    public void excluirInvestimento(int id)        { investRepo.excluir(id); }
-    public List<Investimento> getInvestimentos()   { return investRepo.listarTodos(); }
+    public void salvarInvestimento(Investimento i)    { investRepo.salvar(i); }
+    public void atualizarInvestimento(Investimento i) { investRepo.atualizar(i); }
+    public void excluirInvestimento(int id)           { investRepo.excluir(id); }
+    public List<Investimento> getInvestimentos()      { return investRepo.listarTodos(); }
 
     // --- Lançamentos Fixos ---
-    public void salvarLancamentoFixo(LancamentoFixo lf) { fixoRepo.salvar(lf); }
-    public void excluirLancamentoFixo(int id)           { fixoRepo.excluir(id); }
-    public void alternarAtivoFixo(int id)               { fixoRepo.alternarAtivo(id); }
-    public List<LancamentoFixo> getLancamentosFixos()   { return fixoRepo.listarTodos(); }
+    public void salvarLancamentoFixo(LancamentoFixo lf)    { fixoRepo.salvar(lf); }
+    public void atualizarLancamentoFixo(LancamentoFixo lf) { fixoRepo.atualizar(lf); }
+    public void excluirLancamentoFixo(int id)              { fixoRepo.excluir(id); }
+    public void alternarAtivoFixo(int id)                  { fixoRepo.alternarAtivo(id); }
+    public List<LancamentoFixo> getLancamentosFixos()      { return fixoRepo.listarTodos(); }
 
     public int aplicarFixosMes(String mes, int ano) {
         int aplicados = 0;
