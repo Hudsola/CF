@@ -1,0 +1,142 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  # ─────────────────────────────────────────────
+  # JOB 1: Testes + Cobertura
+  # ─────────────────────────────────────────────
+  test:
+    name: Testes & Cobertura (JaCoCo)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Executar testes e gerar relatório de cobertura
+        run: mvn test jacoco:report --no-transfer-progress
+
+      - name: Verificar cobertura mínima (70%)
+        run: mvn jacoco:check --no-transfer-progress
+
+      - name: Upload relatório JaCoCo
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────
+  # JOB 2: Build do JAR
+  # ─────────────────────────────────────────────
+  build:
+    name: Build (Fat JAR)
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build do JAR (skip testes — já rodaram no job anterior)
+        run: mvn package -DskipTests --no-transfer-progress
+
+      - name: Upload do JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: controle-financeiro-jar
+          path: target/controle-financeiro-*.jar
+          retention-days: 14
+
+  # ─────────────────────────────────────────────
+  # JOB 3: Empacotamento nativo (jpackage)
+  # Roda apenas em push para main
+  # ─────────────────────────────────────────────
+  package:
+    name: Executável Nativo (jpackage)
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build do JAR
+        run: mvn package -DskipTests --no-transfer-progress
+
+      - name: Empacotar com jpackage (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          jpackage \
+            --input target \
+            --main-jar controle-financeiro-1.0.0.jar \
+            --main-class ui.App \
+            --name "ControleFinanceiro" \
+            --app-version 1.0.0 \
+            --type deb \
+            --dest dist
+
+      - name: Empacotar com jpackage (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          jpackage `
+            --input target `
+            --main-jar controle-financeiro-1.0.0.jar `
+            --main-class ui.App `
+            --name "ControleFinanceiro" `
+            --app-version 1.0.0 `
+            --type exe `
+            --win-shortcut `
+            --win-menu `
+            --dest dist
+
+      - name: Empacotar com jpackage (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          jpackage \
+            --input target \
+            --main-jar controle-financeiro-1.0.0.jar \
+            --main-class ui.App \
+            --name "ControleFinanceiro" \
+            --app-version 1.0.0 \
+            --type dmg \
+            --dest dist
+
+      - name: Upload do executável nativo
+        uses: actions/upload-artifact@v4
+        with:
+          name: executavel-${{ runner.os }}
+          path: dist/
+          retention-days: 30
