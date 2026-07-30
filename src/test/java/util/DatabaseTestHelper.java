@@ -9,7 +9,9 @@ import db.DatabaseManager;
 public class DatabaseTestHelper {
 
     public static void setup() {
+        System.out.println("=== SETUP ===");
         DatabaseManager.setUrl("jdbc:sqlite::memory:");
         DatabaseManager.inicializar();
+        System.out.println("Banco inicializado");
     }
 }
