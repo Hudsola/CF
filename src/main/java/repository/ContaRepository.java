@@ -64,16 +64,28 @@ public class ContaRepository {
 
     private void verificarDuplicado(String nome, Integer idExcluir) {
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT id, nome FROM contas WHERE nome=? COLLATE NOCASE")) {
-            ps.setString(1, nome);
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT id, nome FROM contas")) {
+
             ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
+
+            while (rs.next()) {
                 int encontrado = rs.getInt("id");
-                if (idExcluir == null || encontrado != idExcluir)
-                    throw new RuntimeException("Já existe uma conta chamada \"" + rs.getString("nome") + "\".");
+                String nomeExistente = rs.getString("nome");
+
+                if ((idExcluir == null || encontrado != idExcluir)
+                        && nomeExistente.equalsIgnoreCase(nome)) {
+
+                    throw new RuntimeException(
+                            "Já existe uma conta chamada \"" + nomeExistente + "\"."
+                    );
+                }
             }
+
         } catch (SQLException e) {
-            throw new RuntimeException("Erro ao verificar duplicidade: " + e.getMessage(), e);
+            throw new RuntimeException(
+                    "Erro ao verificar duplicidade: " + e.getMessage(), e
+            );
         }
     }
 }

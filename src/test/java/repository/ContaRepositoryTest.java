@@ -36,7 +36,7 @@ class ContaRepositoryTest {
 
     @Test
     @Order(3)
-    void deveRejeitarDuplicadaComEspacos() {
+    void deveRejeitarDuplicadaComAcentos() {
         repo.salvar(new Conta("Itaú"));
         RuntimeException ex = assertThrows(RuntimeException.class,
             () -> repo.salvar(new Conta("ITAÚ")));
