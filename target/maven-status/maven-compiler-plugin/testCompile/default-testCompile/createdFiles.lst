@@ -1,0 +1,8 @@
+repository\ReceitaRepositoryTest.class
+repository\InvestimentoRepositoryTest.class
+repository\ContaRepositoryTest.class
+repository\DespesaRepositoryTest.class
+repository\LancamentoFixoRepositoryTest.class
+repository\CategoriaRepositoryTest.class
+service\ControleFinanceiroTest.class
+util\DatabaseTestHelper.class

@@ -1,0 +1,4 @@
+--patch-module
+com.controlefinanceiro=_
+--add-reads
+com.controlefinanceiro=ALL-UNNAMED

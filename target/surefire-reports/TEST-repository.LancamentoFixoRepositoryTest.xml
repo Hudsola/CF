@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="repository.LancamentoFixoRepositoryTest" time="0.026" tests="6" errors="6" skipped="0" failures="0">
+  <properties>
+    <property name="java.specification.version" value="18"/>
+    <property name="sun.cpu.isalist" value="amd64"/>
+    <property name="sun.jnu.encoding" value="Cp1252"/>
+    <property name="java.class.path" value="C:\Users\Hudsola\Documents\Projetos\ControleFinanceiro\CF\target\test-classes;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-controls\21.0.2\javafx-controls-21.0.2.jar;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-fxml\21.0.2\javafx-fxml-21.0.2.jar;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-graphics\21.0.2\javafx-graphics-21.0.2.jar;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-base\21.0.2\javafx-base-21.0.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\jupiter\junit-jupiter\5.10.2\junit-jupiter-5.10.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.10.2\junit-jupiter-api-5.10.2.jar;C:\Users\Hudsola\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\Hudsola\.m2\repository\org\junit\platform\junit-platform-commons\1.10.2\junit-platform-commons-1.10.2.jar;C:\Users\Hudsola\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.10.2\junit-jupiter-params-5.10.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.10.2\junit-jupiter-engine-5.10.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\platform\junit-platform-engine\1.10.2\junit-platform-engine-1.10.2.jar;"/>
+    <property name="java.vm.vendor" value="Amazon.com Inc."/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="user.variant" value=""/>
+    <property name="java.vendor.url" value="https://aws.amazon.com/corretto/"/>
+    <property name="user.timezone" value="America/Sao_Paulo"/>
+    <property name="os.name" value="Windows 10"/>
+    <property name="java.vm.specification.version" value="18"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="user.country" value="BR"/>
+    <property name="sun.boot.library.path" value="C:\Users\Hudsola\.jdks\corretto-18.0.2\bin"/>
+    <property name="sun.java.command" value="org.apache.maven.surefire.booter.ForkedBooter C:\Users\Hudsola\AppData\Local\Temp\surefire5250331110916566350 2026-07-02T18-42-21_638-jvmRun1 surefire-20260702184221980_1tmp surefire_0-20260702184221980_2tmp"/>
+    <property name="jdk.debug" value="release"/>
+    <property name="surefire.test.class.path" value="C:\Users\Hudsola\Documents\Projetos\ControleFinanceiro\CF\target\test-classes;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-controls\21.0.2\javafx-controls-21.0.2.jar;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-fxml\21.0.2\javafx-fxml-21.0.2.jar;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-graphics\21.0.2\javafx-graphics-21.0.2.jar;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-base\21.0.2\javafx-base-21.0.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\jupiter\junit-jupiter\5.10.2\junit-jupiter-5.10.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.10.2\junit-jupiter-api-5.10.2.jar;C:\Users\Hudsola\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\Hudsola\.m2\repository\org\junit\platform\junit-platform-commons\1.10.2\junit-platform-commons-1.10.2.jar;C:\Users\Hudsola\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.10.2\junit-jupiter-params-5.10.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.10.2\junit-jupiter-engine-5.10.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\platform\junit-platform-engine\1.10.2\junit-platform-engine-1.10.2.jar;"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="C:\Users\Hudsola"/>
+    <property name="user.language" value="pt"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="jdk.module.path" value="C:\Users\Hudsola\Documents\Projetos\ControleFinanceiro\CF\target\classes;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-controls\21.0.2\javafx-controls-21.0.2-win.jar;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-fxml\21.0.2\javafx-fxml-21.0.2-win.jar;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-graphics\21.0.2\javafx-graphics-21.0.2-win.jar;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-base\21.0.2\javafx-base-21.0.2-win.jar;C:\Users\Hudsola\.m2\repository\org\xerial\sqlite-jdbc\3.47.1.0\sqlite-jdbc-3.47.1.0.jar"/>
+    <property name="java.version.date" value="2022-07-19"/>
+    <property name="java.home" value="C:\Users\Hudsola\.jdks\corretto-18.0.2"/>
+    <property name="file.separator" value="\"/>
+    <property name="basedir" value="C:\Users\Hudsola\Documents\Projetos\ControleFinanceiro\CF"/>
+    <property name="java.vm.compressedOopsMode" value="Zero based"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="surefire.real.class.path" value="C:\Users\Hudsola\.m2\repository\org\apache\maven\surefire\surefire-booter\3.2.5\surefire-booter-3.2.5.jar;C:\Users\Hudsola\.m2\repository\org\apache\maven\surefire\surefire-api\3.2.5\surefire-api-3.2.5.jar;C:\Users\Hudsola\.m2\repository\org\apache\maven\surefire\surefire-logger-api\3.2.5\surefire-logger-api-3.2.5.jar;C:\Users\Hudsola\.m2\repository\org\apache\maven\surefire\surefire-shared-utils\3.2.5\surefire-shared-utils-3.2.5.jar;C:\Users\Hudsola\.m2\repository\org\apache\maven\surefire\surefire-extensions-spi\3.2.5\surefire-extensions-spi-3.2.5.jar;C:\Users\Hudsola\Documents\Projetos\ControleFinanceiro\CF\target\test-classes;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-controls\21.0.2\javafx-controls-21.0.2.jar;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-fxml\21.0.2\javafx-fxml-21.0.2.jar;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-graphics\21.0.2\javafx-graphics-21.0.2.jar;C:\Users\Hudsola\.m2\repository\org\openjfx\javafx-base\21.0.2\javafx-base-21.0.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\jupiter\junit-jupiter\5.10.2\junit-jupiter-5.10.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.10.2\junit-jupiter-api-5.10.2.jar;C:\Users\Hudsola\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\Hudsola\.m2\repository\org\junit\platform\junit-platform-commons\1.10.2\junit-platform-commons-1.10.2.jar;C:\Users\Hudsola\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.10.2\junit-jupiter-params-5.10.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.10.2\junit-jupiter-engine-5.10.2.jar;C:\Users\Hudsola\.m2\repository\org\junit\platform\junit-platform-engine\1.10.2\junit-platform-engine-1.10.2.jar;C:\Users\Hudsola\.m2\repository\org\apache\maven\surefire\surefire-junit-platform\3.2.5\surefire-junit-platform-3.2.5.jar;C:\Users\Hudsola\.m2\repository\org\apache\maven\surefire\common-java5\3.2.5\common-java5-3.2.5.jar;C:\Users\Hudsola\.m2\repository\org\junit\platform\junit-platform-launcher\1.10.2\junit-platform-launcher-1.10.2.jar"/>
+    <property name="user.script" value=""/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="java.runtime.version" value="18.0.2+9-FR"/>
+    <property name="user.name" value="Hudsola"/>
+    <property name="path.separator" value=";"/>
+    <property name="os.version" value="10.0"/>
+    <property name="java.runtime.name" value="OpenJDK Runtime Environment"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="java.vm.name" value="OpenJDK 64-Bit Server VM"/>
+    <property name="java.vendor.version" value="Corretto-18.0.2.9.1"/>
+    <property name="localRepository" value="C:\Users\Hudsola\.m2\repository"/>
+    <property name="java.vendor.url.bug" value="https://github.com/corretto/corretto-18/issues/"/>
+    <property name="java.io.tmpdir" value="C:\Users\Hudsola\AppData\Local\Temp\"/>
+    <property name="java.version" value="18.0.2"/>
+    <property name="user.dir" value="C:\Users\Hudsola\Documents\Projetos\ControleFinanceiro\CF"/>
+    <property name="os.arch" value="amd64"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="sun.os.patch.level" value=""/>
+    <property name="native.encoding" value="Cp1252"/>
+    <property name="java.library.path" value="C:\Users\Hudsola\.jdks\corretto-18.0.2\bin;C:\Windows\Sun\Java\bin;C:\Windows\system32;C:\Windows;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\Git\cmd;C:\Users\Hudsola\.jdks\corretto-18.0.2\bin;C:\Program Files\Apache\apache-maven-3.9.16\bin;;."/>
+    <property name="java.vm.info" value="mixed mode"/>
+    <property name="java.vendor" value="Amazon.com Inc."/>
+    <property name="java.vm.version" value="18.0.2+9-FR"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
+    <property name="java.class.version" value="62.0"/>
+  </properties>
+  <testcase name="deveSalvarEListar" classname="repository.LancamentoFixoRepositoryTest" time="0.005">
+    <error message="Erro ao verificar duplicidade: [SQLITE_ERROR] SQL error or missing database (no such table: contas)" type="java.lang.RuntimeException"><![CDATA[java.lang.RuntimeException: Erro ao verificar duplicidade: [SQLITE_ERROR] SQL error or missing database (no such table: contas)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.verificarDuplicado(ContaRepository.java:76)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.salvar(ContaRepository.java:13)
+	at com.controlefinanceiro@1.0.0/repository.LancamentoFixoRepositoryTest.setUp(LancamentoFixoRepositoryTest.java:21)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:577)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: org.sqlite.SQLiteException: [SQLITE_ERROR] SQL error or missing database (no such table: contas)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.newSQLException(DB.java:1179)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.newSQLException(DB.java:1190)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.throwex(DB.java:1150)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.NativeDB.prepare_utf8(Native Method)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.NativeDB.prepare(NativeDB.java:135)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.prepare(DB.java:264)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.CorePreparedStatement.<init>(CorePreparedStatement.java:46)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3PreparedStatement.<init>(JDBC3PreparedStatement.java:32)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc4.JDBC4PreparedStatement.<init>(JDBC4PreparedStatement.java:25)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc4.JDBC4Connection.prepareStatement(JDBC4Connection.java:34)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:225)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:205)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.verificarDuplicado(ContaRepository.java:67)
+	... 5 more
+]]></error>
+    <system-out><![CDATA[=== SETUP ===
+Banco inicializado
+]]></system-out>
+  </testcase>
+  <testcase name="deveListarAtivos" classname="repository.LancamentoFixoRepositoryTest" time="0.003">
+    <error message="Erro ao verificar duplicidade: [SQLITE_ERROR] SQL error or missing database (no such table: contas)" type="java.lang.RuntimeException"><![CDATA[java.lang.RuntimeException: Erro ao verificar duplicidade: [SQLITE_ERROR] SQL error or missing database (no such table: contas)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.verificarDuplicado(ContaRepository.java:76)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.salvar(ContaRepository.java:13)
+	at com.controlefinanceiro@1.0.0/repository.LancamentoFixoRepositoryTest.setUp(LancamentoFixoRepositoryTest.java:21)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:577)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: org.sqlite.SQLiteException: [SQLITE_ERROR] SQL error or missing database (no such table: contas)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.newSQLException(DB.java:1179)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.newSQLException(DB.java:1190)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.throwex(DB.java:1150)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.NativeDB.prepare_utf8(Native Method)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.NativeDB.prepare(NativeDB.java:135)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.prepare(DB.java:264)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.CorePreparedStatement.<init>(CorePreparedStatement.java:46)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3PreparedStatement.<init>(JDBC3PreparedStatement.java:32)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc4.JDBC4PreparedStatement.<init>(JDBC4PreparedStatement.java:25)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc4.JDBC4Connection.prepareStatement(JDBC4Connection.java:34)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:225)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:205)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.verificarDuplicado(ContaRepository.java:67)
+	... 5 more
+]]></error>
+    <system-out><![CDATA[=== SETUP ===
+Banco inicializado
+]]></system-out>
+  </testcase>
+  <testcase name="deveAlternarAtivo" classname="repository.LancamentoFixoRepositoryTest" time="0.002">
+    <error message="Erro ao verificar duplicidade: [SQLITE_ERROR] SQL error or missing database (no such table: contas)" type="java.lang.RuntimeException"><![CDATA[java.lang.RuntimeException: Erro ao verificar duplicidade: [SQLITE_ERROR] SQL error or missing database (no such table: contas)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.verificarDuplicado(ContaRepository.java:76)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.salvar(ContaRepository.java:13)
+	at com.controlefinanceiro@1.0.0/repository.LancamentoFixoRepositoryTest.setUp(LancamentoFixoRepositoryTest.java:21)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:577)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: org.sqlite.SQLiteException: [SQLITE_ERROR] SQL error or missing database (no such table: contas)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.newSQLException(DB.java:1179)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.newSQLException(DB.java:1190)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.throwex(DB.java:1150)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.NativeDB.prepare_utf8(Native Method)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.NativeDB.prepare(NativeDB.java:135)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.prepare(DB.java:264)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.CorePreparedStatement.<init>(CorePreparedStatement.java:46)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3PreparedStatement.<init>(JDBC3PreparedStatement.java:32)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc4.JDBC4PreparedStatement.<init>(JDBC4PreparedStatement.java:25)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc4.JDBC4Connection.prepareStatement(JDBC4Connection.java:34)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:225)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:205)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.verificarDuplicado(ContaRepository.java:67)
+	... 5 more
+]]></error>
+    <system-out><![CDATA[=== SETUP ===
+Banco inicializado
+]]></system-out>
+  </testcase>
+  <testcase name="naoDeveAplicarDuasVezesNoMesmoMes" classname="repository.LancamentoFixoRepositoryTest" time="0.003">
+    <error message="Erro ao verificar duplicidade: [SQLITE_ERROR] SQL error or missing database (no such table: contas)" type="java.lang.RuntimeException"><![CDATA[java.lang.RuntimeException: Erro ao verificar duplicidade: [SQLITE_ERROR] SQL error or missing database (no such table: contas)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.verificarDuplicado(ContaRepository.java:76)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.salvar(ContaRepository.java:13)
+	at com.controlefinanceiro@1.0.0/repository.LancamentoFixoRepositoryTest.setUp(LancamentoFixoRepositoryTest.java:21)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:577)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: org.sqlite.SQLiteException: [SQLITE_ERROR] SQL error or missing database (no such table: contas)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.newSQLException(DB.java:1179)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.newSQLException(DB.java:1190)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.throwex(DB.java:1150)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.NativeDB.prepare_utf8(Native Method)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.NativeDB.prepare(NativeDB.java:135)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.prepare(DB.java:264)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.CorePreparedStatement.<init>(CorePreparedStatement.java:46)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3PreparedStatement.<init>(JDBC3PreparedStatement.java:32)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc4.JDBC4PreparedStatement.<init>(JDBC4PreparedStatement.java:25)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc4.JDBC4Connection.prepareStatement(JDBC4Connection.java:34)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:225)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:205)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.verificarDuplicado(ContaRepository.java:67)
+	... 5 more
+]]></error>
+    <system-out><![CDATA[=== SETUP ===
+Banco inicializado
+]]></system-out>
+  </testcase>
+  <testcase name="deveAtualizar" classname="repository.LancamentoFixoRepositoryTest" time="0.003">
+    <error message="Erro ao verificar duplicidade: [SQLITE_ERROR] SQL error or missing database (no such table: contas)" type="java.lang.RuntimeException"><![CDATA[java.lang.RuntimeException: Erro ao verificar duplicidade: [SQLITE_ERROR] SQL error or missing database (no such table: contas)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.verificarDuplicado(ContaRepository.java:76)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.salvar(ContaRepository.java:13)
+	at com.controlefinanceiro@1.0.0/repository.LancamentoFixoRepositoryTest.setUp(LancamentoFixoRepositoryTest.java:21)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:577)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: org.sqlite.SQLiteException: [SQLITE_ERROR] SQL error or missing database (no such table: contas)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.newSQLException(DB.java:1179)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.newSQLException(DB.java:1190)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.throwex(DB.java:1150)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.NativeDB.prepare_utf8(Native Method)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.NativeDB.prepare(NativeDB.java:135)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.prepare(DB.java:264)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.CorePreparedStatement.<init>(CorePreparedStatement.java:46)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3PreparedStatement.<init>(JDBC3PreparedStatement.java:32)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc4.JDBC4PreparedStatement.<init>(JDBC4PreparedStatement.java:25)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc4.JDBC4Connection.prepareStatement(JDBC4Connection.java:34)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:225)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:205)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.verificarDuplicado(ContaRepository.java:67)
+	... 5 more
+]]></error>
+    <system-out><![CDATA[=== SETUP ===
+Banco inicializado
+]]></system-out>
+  </testcase>
+  <testcase name="deveExcluirComAplicacoes" classname="repository.LancamentoFixoRepositoryTest" time="0.005">
+    <error message="Erro ao verificar duplicidade: [SQLITE_ERROR] SQL error or missing database (no such table: contas)" type="java.lang.RuntimeException"><![CDATA[java.lang.RuntimeException: Erro ao verificar duplicidade: [SQLITE_ERROR] SQL error or missing database (no such table: contas)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.verificarDuplicado(ContaRepository.java:76)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.salvar(ContaRepository.java:13)
+	at com.controlefinanceiro@1.0.0/repository.LancamentoFixoRepositoryTest.setUp(LancamentoFixoRepositoryTest.java:21)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:577)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: org.sqlite.SQLiteException: [SQLITE_ERROR] SQL error or missing database (no such table: contas)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.newSQLException(DB.java:1179)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.newSQLException(DB.java:1190)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.throwex(DB.java:1150)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.NativeDB.prepare_utf8(Native Method)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.NativeDB.prepare(NativeDB.java:135)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.DB.prepare(DB.java:264)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.core.CorePreparedStatement.<init>(CorePreparedStatement.java:46)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3PreparedStatement.<init>(JDBC3PreparedStatement.java:32)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc4.JDBC4PreparedStatement.<init>(JDBC4PreparedStatement.java:25)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc4.JDBC4Connection.prepareStatement(JDBC4Connection.java:34)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:225)
+	at org.xerial.sqlitejdbc@3.47.1.0/org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:205)
+	at com.controlefinanceiro@1.0.0/repository.ContaRepository.verificarDuplicado(ContaRepository.java:67)
+	... 5 more
+]]></error>
+    <system-out><![CDATA[=== SETUP ===
+Banco inicializado
+]]></system-out>
+  </testcase>
+</testsuite>
