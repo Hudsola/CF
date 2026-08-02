@@ -39,7 +39,9 @@ public class LancamentoFixoRepository {
         } catch (SQLException e) { throw new RuntimeException("Erro ao atualizar lançamento fixo: " + e.getMessage(), e); }
     }
 
-    public List<LancamentoFixo> listarTodos() { return query(SELECT_BASE + "ORDER BY lf.tipo, lf.descricao"); }
+    public List<LancamentoFixo> listarTodos() {
+        return query(SELECT_BASE + "ORDER BY lf.tipo, lf.descricao");
+    }
 
     public List<LancamentoFixo> listarAtivos() { return query(SELECT_BASE + "WHERE lf.ativo=1 ORDER BY lf.tipo, lf.descricao"); }
 

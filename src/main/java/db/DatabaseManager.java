@@ -115,6 +115,14 @@ public class DatabaseManager {
                 VALUES (1, 'Usuário', 1, 0, 100)
             """);
 
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS mapeamentos_descricao (
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    padrao        TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+                    categoria_id  INTEGER NOT NULL REFERENCES categorias(id),
+                    detalhe       TEXT    NOT NULL )
+            """);
+
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao inicializar banco: " + e.getMessage(), e);
         }

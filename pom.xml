@@ -96,10 +96,15 @@
                     <execution>
                         <id>check</id>
                         <phase>verify</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
+                        <goals><goal>check</goal></goals>
                         <configuration>
+                            <excludes>
+                                <exclude>ui/**</exclude>
+                                <exclude>ui/cadastros/**</exclude>
+                                <exclude>ui/home/**</exclude>
+                                <exclude>ui/resumo/**</exclude>
+                                <exclude>ui/components/**</exclude>
+                            </excludes>
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>

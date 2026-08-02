@@ -154,4 +154,199 @@ class ControleFinanceiroTest {
         assertTrue(anos.contains(2024));
         assertTrue(anos.contains(2025));
     }
+
+    @Test
+    @Order(11)
+    void deveSomarInvestimentosPorMesEAno() {
+        cf.salvarInvestimento(new Investimento(
+                "Poupança", 500.00, contaId,
+                LocalDate.of(2025, 6, 1), "JUNHO", 2025
+        ));
+
+        cf.salvarInvestimento(new Investimento(
+                "Ações", 1000.00, contaId,
+                LocalDate.of(2025, 7, 1), "JULHO", 2025
+        ));
+
+        assertEquals(500.00, cf.somarInvestimentos("JUNHO", 2025), 0.01);
+        assertEquals(1000.00, cf.somarInvestimentos("JULHO", 2025), 0.01);
+        assertEquals(1500.00, cf.somarInvestimentosAno(2025), 0.01);
+    }
+
+    @Test
+    @Order(12)
+    void deveCalcularSaldoTotal() {
+        cf.salvarReceita(new Receita(
+                "Salário", 5000.00, contaId,
+                LocalDate.of(2025, 6, 5), "JUNHO", 2025
+        ));
+
+        cf.salvarDespesa(new Despesa(
+                catId, "Aluguel", 1000.00, contaId,
+                LocalDate.of(2025, 6, 10), "JUNHO", 2025
+        ));
+
+        cf.salvarInvestimento(new Investimento(
+                "Poupança", 500.00, contaId,
+                LocalDate.of(2025, 6, 15), "JUNHO", 2025
+        ));
+
+        assertEquals(3500.00, cf.saldoTotal(), 0.01);
+    }
+
+    @Test
+    @Order(13)
+    void deveCalcularPercentuaisConsiderandoTodosOsMeses() {
+        cf.salvarReceita(new Receita(
+                "Salário", 4000.00, contaId,
+                LocalDate.of(2025, 6, 5), "JUNHO", 2025
+        ));
+
+        cf.salvarReceita(new Receita(
+                "Freelance", 2000.00, contaId,
+                LocalDate.of(2025, 7, 5), "JULHO", 2025
+        ));
+
+        cf.salvarDespesa(new Despesa(
+                catId, "Aluguel", 1500.00, contaId,
+                LocalDate.of(2025, 6, 10), "JUNHO", 2025
+        ));
+
+        cf.salvarInvestimento(new Investimento(
+                "Poupança", 500.00, contaId,
+                LocalDate.of(2025, 7, 10), "JULHO", 2025
+        ));
+
+        assertEquals(
+                0.25,
+                cf.porcentagemRendaGasta(2025, "Todos"),
+                0.001
+        );
+
+        assertEquals(
+                -0.0833,
+                cf.porcentagemRendaInvestida(2025, "Todos"),
+                0.001
+        );
+
+        assertEquals(
+                4000.00,
+                cf.saldoEmConta(2025, "Todos"),
+                0.01
+        );
+    }
+
+    @Test
+    @Order(14)
+    void deveDividirGastosPorCategoria() {
+        cf.salvarDespesa(new Despesa(
+                catId, "Aluguel", 1000.00, contaId,
+                LocalDate.of(2025, 6, 10), "JUNHO", 2025
+        ));
+
+        cf.salvarDespesa(new Despesa(
+                catId, "Condomínio", 500.00, contaId,
+                LocalDate.of(2025, 6, 15), "JUNHO", 2025
+        ));
+
+        Map<String, Double> resultado =
+                cf.divisaoGastosPorCategoria(2025, "JUNHO");
+
+        assertEquals(1500.00, resultado.get("Moradia"), 0.01);
+    }
+
+    @Test
+    @Order(15)
+    void deveDividirInvestimentosPorTipo() {
+        cf.salvarInvestimento(new Investimento(
+                "Poupança", 500.00, contaId,
+                LocalDate.of(2025, 6, 1), "JUNHO", 2025
+        ));
+
+        cf.salvarInvestimento(new Investimento(
+                "Ações", 1000.00, contaId,
+                LocalDate.of(2025, 6, 10), "JUNHO", 2025
+        ));
+
+        Map<String, Double> resultado =
+                cf.divisaoInvestimentosPorTipo(2025, "JUNHO");
+
+        assertEquals(1500.00, resultado.values().stream()
+                .mapToDouble(Double::doubleValue)
+                .sum(), 0.01);
+    }
+
+    @Test
+    @Order(16)
+    void deveAplicarLancamentoFixoDeDespesa() {
+        cf.salvarLancamentoFixo(
+                new LancamentoFixo(
+                        Tipo.DESPESA,
+                        "Aluguel",
+                        catId,
+                        1500.00,
+                        contaId,
+                        10
+                )
+        );
+
+        int aplicados = cf.aplicarFixosMes("JUNHO", 2025);
+
+        assertEquals(1, aplicados);
+        assertEquals(1, cf.getDespesas().size());
+
+        Despesa despesa = cf.getDespesas().get(0);
+
+        assertEquals("Aluguel", despesa.getDetalhamento());
+        assertEquals(1500.00, despesa.getValor(), 0.01);
+    }
+
+    @Test
+    @Order(17)
+    void deveAplicarLancamentoFixoDeInvestimento() {
+        cf.salvarLancamentoFixo(
+                new LancamentoFixo(
+                        Tipo.INVESTIMENTO,
+                        "Poupança",
+                        0,
+                        500.00,
+                        contaId,
+                        10
+                )
+        );
+
+        int aplicados = cf.aplicarFixosMes("JUNHO", 2025);
+
+        assertEquals(1, aplicados);
+        assertEquals(1, cf.getInvestimentos().size());
+
+        Investimento investimento = cf.getInvestimentos().get(0);
+
+        assertEquals("Poupança", investimento.getTipo());
+        assertEquals(500.00, investimento.getValor(), 0.01);
+    }
+
+    @Test
+    @Order(18)
+    void deveAjustarVencimentoParaUltimoDiaDoMes() {
+        cf.salvarLancamentoFixo(
+                new LancamentoFixo(
+                        Tipo.RECEITA,
+                        "Salário",
+                        0,
+                        5000.00,
+                        contaId,
+                        31
+                )
+        );
+
+        cf.aplicarFixosMes("FEVEREIRO", 2025);
+
+        Receita receita = cf.getReceitas().get(0);
+
+        assertEquals(
+                LocalDate.of(2025, 2, 28),
+                receita.getData()
+        );
+    }
 }

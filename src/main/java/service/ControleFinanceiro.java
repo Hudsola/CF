@@ -1,8 +1,9 @@
 package service;
 
 import model.*;
-import model.LancamentoFixo.Tipo;
 import repository.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -12,58 +13,136 @@ import java.util.stream.Collectors;
 public class ControleFinanceiro {
 
     public static final List<String> MESES = List.of(
-        "JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO",
-        "JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO");
+            "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
+            "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO");
 
-    private final CategoriaRepository     categoriaRepo = new CategoriaRepository();
-    private final ContaRepository         contaRepo     = new ContaRepository();
-    private final ReceitaRepository       receitaRepo   = new ReceitaRepository();
-    private final DespesaRepository       despesaRepo   = new DespesaRepository();
-    private final InvestimentoRepository  investRepo    = new InvestimentoRepository();
-    private final LancamentoFixoRepository fixoRepo     = new LancamentoFixoRepository();
-    private final UsuarioRepository       usuarioRepo   = new UsuarioRepository();
+    private final CategoriaRepository categoriaRepo = new CategoriaRepository();
+    private final ContaRepository contaRepo = new ContaRepository();
+    private final ReceitaRepository receitaRepo = new ReceitaRepository();
+    private final DespesaRepository despesaRepo = new DespesaRepository();
+    private final InvestimentoRepository investRepo = new InvestimentoRepository();
+    private final LancamentoFixoRepository fixoRepo = new LancamentoFixoRepository();
+    private final UsuarioRepository usuarioRepo = new UsuarioRepository();
+    private final MapeamentoRepository mapeamentoRepo = new MapeamentoRepository();
 
     // --- Usuário ---
-    public Usuario getUsuario()              { return usuarioRepo.buscarPrincipal(); }
-    public void atualizarUsuario(Usuario u)  { usuarioRepo.atualizar(u); }
+    public Usuario getUsuario() {
+        return usuarioRepo.buscarPrincipal();
+    }
+
+    public void atualizarUsuario(Usuario u) {
+        usuarioRepo.atualizar(u);
+    }
 
     // --- Categorias ---
-    public void salvarCategoria(Categoria c)    { categoriaRepo.salvar(c); }
-    public void atualizarCategoria(Categoria c) { categoriaRepo.atualizar(c); }
-    public void excluirCategoria(int id)        { categoriaRepo.excluir(id); }
-    public List<Categoria> getCategorias()      { return categoriaRepo.listarTodos(); }
+    public void salvarCategoria(Categoria c) {
+        categoriaRepo.salvar(c);
+    }
+
+    public void atualizarCategoria(Categoria c) {
+        categoriaRepo.atualizar(c);
+    }
+
+    public void excluirCategoria(int id) {
+        categoriaRepo.excluir(id);
+    }
+
+    public List<Categoria> getCategorias() {
+        return categoriaRepo.listarTodos();
+    }
 
     // --- Contas ---
-    public void salvarConta(Conta c)            { contaRepo.salvar(c); }
-    public void atualizarConta(Conta c)         { contaRepo.atualizar(c); }
-    public void excluirConta(int id)            { contaRepo.excluir(id); }
-    public List<Conta> getContas()              { return contaRepo.listarTodos(); }
+    public void salvarConta(Conta c) {
+        contaRepo.salvar(c);
+    }
+
+    public void atualizarConta(Conta c) {
+        contaRepo.atualizar(c);
+    }
+
+    public void excluirConta(int id) {
+        contaRepo.excluir(id);
+    }
+
+    public List<Conta> getContas() {
+        return contaRepo.listarTodos();
+    }
 
     // --- Receitas ---
-    public void salvarReceita(Receita r)        { receitaRepo.salvar(r); }
-    public void atualizarReceita(Receita r)     { receitaRepo.atualizar(r); }
-    public void excluirReceita(int id)          { receitaRepo.excluir(id); }
-    public List<Receita> getReceitas()          { return receitaRepo.listarTodos(); }
+    public void salvarReceita(Receita r) {
+        receitaRepo.salvar(r);
+    }
+
+    public void atualizarReceita(Receita r) {
+        receitaRepo.atualizar(r);
+    }
+
+    public void excluirReceita(int id) {
+        receitaRepo.excluir(id);
+    }
+
+    public List<Receita> getReceitas() {
+        return receitaRepo.listarTodos();
+    }
 
     // --- Despesas ---
-    public void salvarDespesa(Despesa d)        { despesaRepo.salvar(d); }
-    public void atualizarDespesa(Despesa d)     { despesaRepo.atualizar(d); }
-    public void excluirDespesa(int id)          { despesaRepo.excluir(id); }
-    public List<Despesa> getDespesas()          { return despesaRepo.listarTodos(); }
+    public void salvarDespesa(Despesa d) {
+        despesaRepo.salvar(d);
+    }
+
+    public void atualizarDespesa(Despesa d) {
+        despesaRepo.atualizar(d);
+    }
+
+    public void excluirDespesa(int id) {
+        despesaRepo.excluir(id);
+    }
+
+    public List<Despesa> getDespesas() {
+        return despesaRepo.listarTodos();
+    }
 
     // --- Investimentos ---
-    public void salvarInvestimento(Investimento i)    { investRepo.salvar(i); }
-    public void atualizarInvestimento(Investimento i) { investRepo.atualizar(i); }
-    public void excluirInvestimento(int id)           { investRepo.excluir(id); }
-    public List<Investimento> getInvestimentos()      { return investRepo.listarTodos(); }
+    public void salvarInvestimento(Investimento i) {
+        investRepo.salvar(i);
+    }
+
+    public void atualizarInvestimento(Investimento i) {
+        investRepo.atualizar(i);
+    }
+
+    public void excluirInvestimento(int id) {
+        investRepo.excluir(id);
+    }
+
+    public List<Investimento> getInvestimentos() {
+        return investRepo.listarTodos();
+    }
 
     // --- Lançamentos Fixos ---
-    public void salvarLancamentoFixo(LancamentoFixo lf)    { fixoRepo.salvar(lf); }
-    public void atualizarLancamentoFixo(LancamentoFixo lf) { fixoRepo.atualizar(lf); }
-    public void excluirLancamentoFixo(int id)              { fixoRepo.excluir(id); }
-    public void alternarAtivoFixo(int id)                  { fixoRepo.alternarAtivo(id); }
-    public List<LancamentoFixo> getLancamentosFixos()      { return fixoRepo.listarTodos(); }
-    public List<LancamentoFixo> getLancamentosFixosAtivos(){ return fixoRepo.listarAtivos(); }
+    public void salvarLancamentoFixo(LancamentoFixo lf) {
+        fixoRepo.salvar(lf);
+    }
+
+    public void atualizarLancamentoFixo(LancamentoFixo lf) {
+        fixoRepo.atualizar(lf);
+    }
+
+    public void excluirLancamentoFixo(int id) {
+        fixoRepo.excluir(id);
+    }
+
+    public void alternarAtivoFixo(int id) {
+        fixoRepo.alternarAtivo(id);
+    }
+
+    public List<LancamentoFixo> getLancamentosFixos() {
+        return fixoRepo.listarTodos();
+    }
+
+    public List<LancamentoFixo> getLancamentosFixosAtivos() {
+        return fixoRepo.listarAtivos();
+    }
 
     public int aplicarFixosMes(String mes, int ano) {
         int aplicados = 0;
@@ -73,9 +152,12 @@ public class ControleFinanceiro {
             int dia = Math.min(lf.getDiaVencimento(), ym.lengthOfMonth());
             LocalDate data = LocalDate.of(ano, ym.getMonthValue(), dia);
             switch (lf.getTipo()) {
-                case RECEITA      -> salvarReceita(new Receita(lf.getDescricao(), lf.getValor(), lf.getContaId(), data, mes, ano));
-                case DESPESA      -> salvarDespesa(new Despesa(lf.getCategoriaId(), lf.getDescricao(), lf.getValor(), lf.getContaId(), data, mes, ano));
-                case INVESTIMENTO -> salvarInvestimento(new Investimento(lf.getDescricao(), lf.getValor(), lf.getContaId(), data, mes, ano));
+                case RECEITA ->
+                        salvarReceita(new Receita(lf.getDescricao(), lf.getValor(), lf.getContaId(), data, mes, ano));
+                case DESPESA ->
+                        salvarDespesa(new Despesa(lf.getCategoriaId(), lf.getDescricao(), lf.getValor(), lf.getContaId(), data, mes, ano));
+                case INVESTIMENTO ->
+                        salvarInvestimento(new Investimento(lf.getDescricao(), lf.getValor(), lf.getContaId(), data, mes, ano));
             }
             fixoRepo.registrarAplicacao(lf.getId(), mes, ano);
             aplicados++;
@@ -83,11 +165,90 @@ public class ControleFinanceiro {
         return aplicados;
     }
 
+    public int aplicarFixosIntervalo(String mesInicio, int anoInicio, String mesFim, int anoFim) {
+        int total = 0;
+        YearMonth atual = YearMonth.of(anoInicio, MESES.indexOf(mesInicio.toUpperCase()) + 1);
+        YearMonth fim = YearMonth.of(anoFim, MESES.indexOf(mesFim.toUpperCase()) + 1);
+
+        while (!atual.isAfter(fim)) {
+            String mes = MESES.get(atual.getMonthValue() - 1);
+            total += aplicarFixosMes(mes, atual.getYear());
+            atual = atual.plusMonths(1);
+        }
+        return total;
+    }
+
+    // --- Importação CSV ---
+
+    public List<LinhaImportacao> lerCsv(String caminho) throws Exception {
+        List<LinhaImportacao> linhas = new ArrayList<>();
+        try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(caminho))) {
+            String linha;
+            boolean primeira = true;
+            while ((linha = br.readLine()) != null) {
+                if (primeira) { primeira = false; continue; }
+                if (linha.isBlank()) continue;
+                String[] partes = parseLinhaCsv(linha);
+                if (partes.length < 3) continue;
+                LocalDate data = LocalDate.parse(partes[0].trim());
+                String titulo  = partes[1].trim();
+                double valor   = Double.parseDouble(
+                        partes[2].trim().replace("\"", "").replace(",", "."));
+
+                LinhaImportacao li = new LinhaImportacao(titulo, valor, data);
+                MapeamentoDescricao map = mapeamentoRepo.buscarPorTitulo(titulo);
+                if (map != null) {
+                    Categoria cat = getCategorias().stream()
+                            .filter(c -> c.getId() == map.getCategoriaId())
+                            .findFirst().orElse(null);
+                    li.setCategoria(cat);
+                    li.setDetalhe(map.getDetalhe());
+                } else {
+                    li.setMapeamentoNovo(true);
+                }
+                linhas.add(li);
+            }
+        }
+        return linhas;
+    }
+
+    public int confirmarImportacao(List<LinhaImportacao> linhas, int contaId) {
+        int importados = 0;
+        for (LinhaImportacao li : linhas) {
+            if (!li.isImportar() || li.getCategoria() == null) continue;
+            String mes = li.getData().getMonth()
+                    .getDisplayName(java.time.format.TextStyle.FULL, new java.util.Locale("pt", "BR"))
+                    .toUpperCase();
+            salvarDespesa(new Despesa(
+                    li.getCategoria().getId(), li.getDetalhe(),
+                    li.getValor(), contaId, li.getData(), mes, li.getData().getYear()));
+            if (li.isMapeamentoNovo()) {
+                mapeamentoRepo.salvar(new MapeamentoDescricao(
+                        li.getTitulo(), li.getCategoria().getId(), li.getDetalhe()));
+            }
+            importados++;
+        }
+        return importados;
+    }
+
+    private String[] parseLinhaCsv(String linha) {
+        List<String> campos = new ArrayList<>();
+        StringBuilder sb = new StringBuilder();
+        boolean dentroAspas = false;
+        for (char c : linha.toCharArray()) {
+            if (c == '"') { dentroAspas = !dentroAspas; }
+            else if (c == ',' && !dentroAspas) { campos.add(sb.toString()); sb.setLength(0); }
+            else { sb.append(c); }
+        }
+        campos.add(sb.toString());
+        return campos.toArray(new String[0]);
+    }
+
     // --- Cálculos ---
 
     public double somarReceitas(String mes, int ano) {
         return receitaRepo.listarPorAno(ano).stream()
-            .filter(r -> r.getMes().equalsIgnoreCase(mes)).mapToDouble(Receita::getValor).sum();
+                .filter(r -> r.getMes().equalsIgnoreCase(mes)).mapToDouble(Receita::getValor).sum();
     }
 
     public double somarReceitasAno(int ano) {
@@ -96,7 +257,7 @@ public class ControleFinanceiro {
 
     public double somarInvestimentos(String mes, int ano) {
         return investRepo.listarPorAno(ano).stream()
-            .filter(i -> i.getMes().equalsIgnoreCase(mes)).mapToDouble(Investimento::getValor).sum();
+                .filter(i -> i.getMes().equalsIgnoreCase(mes)).mapToDouble(Investimento::getValor).sum();
     }
 
     public double somarInvestimentosAno(int ano) {
@@ -105,19 +266,19 @@ public class ControleFinanceiro {
 
     public double somarDespesas(String nomeCategoria, String mes, int ano) {
         return despesaRepo.listarPorAno(ano).stream()
-            .filter(d -> d.getCategoriaNome().equalsIgnoreCase(nomeCategoria) && d.getMes().equalsIgnoreCase(mes))
-            .mapToDouble(Despesa::getValor).sum();
+                .filter(d -> d.getCategoriaNome().equalsIgnoreCase(nomeCategoria) && d.getMes().equalsIgnoreCase(mes))
+                .mapToDouble(Despesa::getValor).sum();
     }
 
     public double somarDespesasCategoriaAno(String nomeCategoria, int ano) {
         return despesaRepo.listarPorAno(ano).stream()
-            .filter(d -> d.getCategoriaNome().equalsIgnoreCase(nomeCategoria))
-            .mapToDouble(Despesa::getValor).sum();
+                .filter(d -> d.getCategoriaNome().equalsIgnoreCase(nomeCategoria))
+                .mapToDouble(Despesa::getValor).sum();
     }
 
     public double somarTotalDespesas(String mes, int ano) {
         return despesaRepo.listarPorAno(ano).stream()
-            .filter(d -> d.getMes().equalsIgnoreCase(mes)).mapToDouble(Despesa::getValor).sum();
+                .filter(d -> d.getMes().equalsIgnoreCase(mes)).mapToDouble(Despesa::getValor).sum();
     }
 
     public double somarTotalDespesasAno(int ano) {
@@ -125,62 +286,64 @@ public class ControleFinanceiro {
     }
 
     public double saldoTotal() {
-        double rec  = getReceitas().stream().mapToDouble(Receita::getValor).sum();
+        double rec = getReceitas().stream().mapToDouble(Receita::getValor).sum();
         double desp = getDespesas().stream().mapToDouble(Despesa::getValor).sum();
-        double inv  = getInvestimentos().stream().mapToDouble(Investimento::getValor).sum();
+        double inv = getInvestimentos().stream().mapToDouble(Investimento::getValor).sum();
         return rec - desp - inv;
     }
 
-    private boolean todos(String mes) { return "Todos".equalsIgnoreCase(mes); }
+    private boolean todos(String mes) {
+        return "Todos".equalsIgnoreCase(mes);
+    }
 
     public double porcentagemRendaGasta(int ano, String mes) {
-        double rec  = todos(mes) ? somarReceitasAno(ano)      : somarReceitas(mes, ano);
+        double rec = todos(mes) ? somarReceitasAno(ano) : somarReceitas(mes, ano);
         double desp = todos(mes) ? somarTotalDespesasAno(ano) : somarTotalDespesas(mes, ano);
         return rec == 0 ? 0 : desp / rec;
     }
 
     public double porcentagemRendaInvestida(int ano, String mes) {
-        double rec = todos(mes) ? somarReceitasAno(ano)      : somarReceitas(mes, ano);
+        double rec = todos(mes) ? somarReceitasAno(ano) : somarReceitas(mes, ano);
         double inv = todos(mes) ? somarInvestimentosAno(ano) : somarInvestimentos(mes, ano);
         return rec == 0 ? 0 : -inv / rec;
     }
 
     public double saldoEmConta(int ano, String mes) {
-        double rec  = todos(mes) ? somarReceitasAno(ano)      : somarReceitas(mes, ano);
+        double rec = todos(mes) ? somarReceitasAno(ano) : somarReceitas(mes, ano);
         double desp = todos(mes) ? somarTotalDespesasAno(ano) : somarTotalDespesas(mes, ano);
-        double inv  = todos(mes) ? somarInvestimentosAno(ano) : somarInvestimentos(mes, ano);
+        double inv = todos(mes) ? somarInvestimentosAno(ano) : somarInvestimentos(mes, ano);
         return rec - desp - inv;
     }
 
     // --- Divisões ---
 
-    public Map<String,Double> divisaoReceitasPorOrigem(int ano, String mes) {
-        Map<String,Double> r = new LinkedHashMap<>();
+    public Map<String, Double> divisaoReceitasPorOrigem(int ano, String mes) {
+        Map<String, Double> r = new LinkedHashMap<>();
         receitaRepo.listarPorAno(ano).stream()
-            .filter(x -> todos(mes) || x.getMes().equalsIgnoreCase(mes))
-            .collect(Collectors.groupingBy(Receita::getOrigem, Collectors.summingDouble(Receita::getValor)))
-            .entrySet().stream().sorted(Map.Entry.<String,Double>comparingByValue().reversed())
-            .forEach(e -> r.put(e.getKey(), e.getValue()));
+                .filter(x -> todos(mes) || x.getMes().equalsIgnoreCase(mes))
+                .collect(Collectors.groupingBy(Receita::getOrigem, Collectors.summingDouble(Receita::getValor)))
+                .entrySet().stream().sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                .forEach(e -> r.put(e.getKey(), e.getValue()));
         return r;
     }
 
-    public Map<String,Double> divisaoGastosPorCategoria(int ano, String mes) {
-        Map<String,Double> r = new LinkedHashMap<>();
+    public Map<String, Double> divisaoGastosPorCategoria(int ano, String mes) {
+        Map<String, Double> r = new LinkedHashMap<>();
         getCategorias().forEach(cat -> {
             double v = todos(mes) ? somarDespesasCategoriaAno(cat.getNome(), ano)
-                                  : somarDespesas(cat.getNome(), mes, ano);
+                    : somarDespesas(cat.getNome(), mes, ano);
             if (v > 0) r.put(cat.getNome(), v);
         });
         return r;
     }
 
-    public Map<String,Double> divisaoInvestimentosPorTipo(int ano, String mes) {
-        Map<String,Double> r = new LinkedHashMap<>();
+    public Map<String, Double> divisaoInvestimentosPorTipo(int ano, String mes) {
+        Map<String, Double> r = new LinkedHashMap<>();
         investRepo.listarPorAno(ano).stream()
-            .filter(x -> todos(mes) || x.getMes().equalsIgnoreCase(mes))
-            .collect(Collectors.groupingBy(Investimento::getTipo, Collectors.summingDouble(Investimento::getValor)))
-            .entrySet().stream().sorted(Map.Entry.<String,Double>comparingByValue().reversed())
-            .forEach(e -> r.put(e.getKey(), e.getValue()));
+                .filter(x -> todos(mes) || x.getMes().equalsIgnoreCase(mes))
+                .collect(Collectors.groupingBy(Investimento::getTipo, Collectors.summingDouble(Investimento::getValor)))
+                .entrySet().stream().sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                .forEach(e -> r.put(e.getKey(), e.getValue()));
         return r;
     }
 
@@ -191,19 +354,21 @@ public class ControleFinanceiro {
         double saldoAcum = 0;
         for (String mes : MESES) {
             ResumoMensal rm = new ResumoMensal(mes);
-            double rec  = somarReceitas(mes, ano);
-            double inv  = somarInvestimentos(mes, ano);
+            double rec = somarReceitas(mes, ano);
+            double inv = somarInvestimentos(mes, ano);
             double desp = somarTotalDespesas(mes, ano);
-            rm.setReceita(rec); rm.setInvestimentos(inv); rm.setDespesaTotal(desp);
+            rm.setReceita(rec);
+            rm.setInvestimentos(inv);
+            rm.setDespesaTotal(desp);
             rm.setAlimentacao(somarDespesas("Alimentação", mes, ano));
-            rm.setMoradia    (somarDespesas("Moradia",      mes, ano));
-            rm.setEducacao   (somarDespesas("Educação",     mes, ano));
-            rm.setPet        (somarDespesas("Pet",          mes, ano));
-            rm.setSaude      (somarDespesas("Saúde",        mes, ano));
-            rm.setTransporte (somarDespesas("Transporte",   mes, ano));
-            rm.setPessoais   (somarDespesas("Pessoais",     mes, ano));
-            rm.setLazer      (somarDespesas("Lazer",        mes, ano));
-            rm.setFinanceiros(somarDespesas("Financeiros",  mes, ano));
+            rm.setMoradia(somarDespesas("Moradia", mes, ano));
+            rm.setEducacao(somarDespesas("Educação", mes, ano));
+            rm.setPet(somarDespesas("Pet", mes, ano));
+            rm.setSaude(somarDespesas("Saúde", mes, ano));
+            rm.setTransporte(somarDespesas("Transporte", mes, ano));
+            rm.setPessoais(somarDespesas("Pessoais", mes, ano));
+            rm.setLazer(somarDespesas("Lazer", mes, ano));
+            rm.setFinanceiros(somarDespesas("Financeiros", mes, ano));
             double saldo = rec + inv - desp;
             rm.setSaldo(saldo);
             saldoAcum += saldo;

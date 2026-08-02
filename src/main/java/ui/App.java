@@ -37,7 +37,7 @@ public class App extends Application {
 
     public static void navegarPara(String tela) {
         switch (tela) {
-            case "home"      -> root.setCenter(new HomeView().getView());
+            case "home" -> root.setCenter(new HomeView().getView());
             case "cadastros" -> root.setCenter(new ui.cadastros.CadastrosView().getView());
             case "resumo"    -> root.setCenter(new ui.resumo.ResumoView().getView());
         }

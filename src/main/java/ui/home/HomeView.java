@@ -4,6 +4,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.*;
 import model.LancamentoFixo;
 import model.Usuario;
@@ -20,19 +21,22 @@ public class HomeView {
 
     private final ControleFinanceiro cf = new ControleFinanceiro();
 
-    public VBox getView() {
+    public ScrollPane getView() {
         VBox root = new VBox(16);
         root.setPadding(new Insets(20));
         root.getStyleClass().add("main-content");
 
         root.getChildren().addAll(
-            criarLinhaCards(),
-            criarBlocoXP(),
-            criarLinhaGraficos(),
-            criarBlocoFixos()
+                criarLinhaCards(),
+                criarBlocoXP(),
+                criarLinhaGraficos(),
+                criarBlocoFixos()
         );
 
-        return root;
+        ScrollPane scroll = new ScrollPane(root);
+        scroll.setFitToWidth(true);
+        scroll.getStyleClass().add("main-scroll");
+        return scroll;
     }
 
     // -------------------------------------------------------------------------
