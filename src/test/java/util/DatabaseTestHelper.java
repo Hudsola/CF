@@ -10,6 +10,7 @@ public class DatabaseTestHelper {
     public static void setup() {
         try {
             Path banco = Files.createTempFile("controle_financeiro_test_", ".db");
+            banco.toFile().deleteOnExit();
 
             DatabaseManager.setUrl("jdbc:sqlite:" + banco.toAbsolutePath());
 

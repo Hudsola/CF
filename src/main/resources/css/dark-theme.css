@@ -431,3 +431,11 @@
 .scroll-bar .decrement-button {
     -fx-background-color: #1a1a1a;
 }
+.main-scroll {
+    -fx-background-color: #121212;
+    -fx-background: #121212;
+}
+
+.main-scroll .viewport {
+    -fx-background-color: #121212;
+}

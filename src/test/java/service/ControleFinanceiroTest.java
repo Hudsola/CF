@@ -114,6 +114,19 @@ class ControleFinanceiroTest {
         assertEquals(5000.00, fevereiro.getSaldoAcumulado(), 0.01);
     }
 
+    @Test
+    void saldoDoResumoAnualDeveSerIgualAoSaldoEmConta() {
+        cf.salvarReceita(new Receita("Salário", 5000.00, contaId, LocalDate.of(2025, 6, 5), "JUNHO", 2025));
+        cf.salvarDespesa(new Despesa(catId, "Aluguel", 1000.00, contaId, LocalDate.of(2025, 6, 10), "JUNHO", 2025));
+        cf.salvarInvestimento(new Investimento("Poupança", 500.00, contaId, LocalDate.of(2025, 6, 1), "JUNHO", 2025));
+
+        ResumoMensal junho = cf.gerarResumoAnual(2025).get(5);
+
+        assertEquals(3500.00, junho.getSaldo(), 0.01);
+        assertEquals(cf.saldoEmConta(2025, "JUNHO"), junho.getSaldo(), 0.01);
+        assertEquals(0.10, cf.porcentagemRendaInvestida(2025, "JUNHO"), 0.001);
+    }
+
     // --- Divisões ---
 
     @Test
@@ -140,6 +153,28 @@ class ControleFinanceiroTest {
         assertEquals(1, primeira);
         assertEquals(0, segunda);
         assertEquals(1, cf.getReceitas().size());
+    }
+
+    @Test
+    void naoDeveSalvarFixoDeDespesaSemCategoria() {
+        assertThrows(IllegalArgumentException.class, () -> cf.salvarLancamentoFixo(
+                new LancamentoFixo(Tipo.DESPESA, "Internet", 0, 100.00, contaId, 10)));
+        assertTrue(cf.getLancamentosFixos().isEmpty());
+    }
+
+    @Test
+    void deveAceitarMesEmMinusculasERejeitarMesInvalido() {
+        cf.salvarLancamentoFixo(new LancamentoFixo(Tipo.RECEITA, "Salário", 0, 5000.00, contaId, 5));
+
+        assertEquals(1, cf.aplicarFixosMes("março", 2025));
+        assertEquals("MARÇO", cf.getReceitas().get(0).getMes());
+        assertThrows(IllegalArgumentException.class, () -> cf.aplicarFixosMes("Marco", 2025));
+    }
+
+    @Test
+    void naoDeveSalvarDespesaComCategoriaInexistente() {
+        assertThrows(RuntimeException.class, () -> cf.salvarDespesa(
+                new Despesa(9999, "X", 10.00, contaId, LocalDate.of(2025, 6, 1), "JUNHO", 2025)));
     }
 
     // --- Anos disponíveis ---
@@ -224,7 +259,7 @@ class ControleFinanceiroTest {
         );
 
         assertEquals(
-                -0.0833,
+                0.0833,
                 cf.porcentagemRendaInvestida(2025, "Todos"),
                 0.001
         );

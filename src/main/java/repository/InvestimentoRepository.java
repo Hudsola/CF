@@ -63,9 +63,76 @@ public class InvestimentoRepository {
         return lista;
     }
 
+    public List<Investimento> listarPorMesAno(String mes, int ano) {
+        List<Investimento> lista = new ArrayList<>();
+        String sql = SELECT_BASE + "WHERE i.mes=? AND i.ano=? ORDER BY i.data";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, mes);
+            ps.setInt(2, ano);
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                lista.add(map(rs));
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao listar investimentos: " + e.getMessage(), e);
+        }
+
+        return lista;
+    }
+
     private Investimento map(ResultSet rs) throws SQLException {
         return new Investimento(rs.getInt("id"), rs.getString("tipo"), rs.getDouble("valor"),
             rs.getInt("conta_id"), rs.getString("conta_nome"),
             LocalDate.parse(rs.getString("data")), rs.getString("mes"), rs.getInt("ano"));
+    }
+
+    public List<Investimento> pesquisar(String tipo, String mes, Integer ano) {
+
+        StringBuilder sql = new StringBuilder(SELECT_BASE + "WHERE 1=1 ");
+        List<Object> parametros = new ArrayList<>();
+
+        if (tipo != null && !tipo.equalsIgnoreCase("Todos")) {
+            sql.append("AND i.tipo = ? ");
+            parametros.add(tipo);
+        }
+
+        if (mes != null && !mes.equalsIgnoreCase("Todos")) {
+            sql.append("AND i.mes = ? ");
+            parametros.add(mes);
+        }
+
+        if (ano != null) {
+            sql.append("AND i.ano = ? ");
+            parametros.add(ano);
+        }
+
+        sql.append("ORDER BY i.data DESC");
+
+        List<Investimento> lista = new ArrayList<>();
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < parametros.size(); i++) {
+                ps.setObject(i + 1, parametros.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                lista.add(map(rs));
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao pesquisar investimentos.", e);
+        }
+
+        return lista;
     }
 }

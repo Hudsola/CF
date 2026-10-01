@@ -62,4 +62,32 @@ class CategoriaRepositoryTest {
         repo.excluir(cat.getId());
         assertFalse(repo.listarTodos().stream().anyMatch(c -> c.getNome().equals("ParaExcluir")));
     }
+
+    @Test
+    @Order(6)
+    void deveExcluirCategoriaJuntoComSeusMapeamentos() {
+        repo.salvar(new Categoria("ComMapeamento"));
+        Categoria cat = repo.listarTodos().stream()
+            .filter(c -> c.getNome().equals("ComMapeamento")).findFirst().orElseThrow();
+        MapeamentoRepository mapRepo = new MapeamentoRepository();
+        mapRepo.salvar(new model.MapeamentoDescricao("Loja X", cat.getId(), "Loja X"));
+
+        repo.excluir(cat.getId());
+
+        assertTrue(mapRepo.listarTodos().isEmpty());
+    }
+
+    @Test
+    @Order(7)
+    void naoDeveExcluirCategoriaUsadaEmLancamentoFixo() {
+        new ContaRepository().salvar(new model.Conta("Nubank"));
+        int contaId = new ContaRepository().listarTodos().get(0).getId();
+        Categoria moradia = repo.listarTodos().stream()
+            .filter(c -> c.getNome().equals("Moradia")).findFirst().orElseThrow();
+        new LancamentoFixoRepository().salvar(new model.LancamentoFixo(
+            model.LancamentoFixo.Tipo.DESPESA, "Aluguel", moradia.getId(), 1500.00, contaId, 10));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> repo.excluir(moradia.getId()));
+        assertTrue(ex.getMessage().contains("lançamentos fixos"));
+    }
 }

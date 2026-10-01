@@ -1,14 +1,17 @@
-# Banco de dados SQLite gerado em tempo de execução
+# Banco de dados SQLite (contém dados pessoais — nunca versionar)
 *.db
+*.db-journal
 *.db-shm
 *.db-wal
+*.sqbpro
+
+# Build do Maven
+target/
+dist/
 
 # Arquivos compilados
 out/
 *.class
-
-# Driver SQLite (baixado manualmente, não versionado)
-lib/
 
 # IDEs
 .idea/

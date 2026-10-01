@@ -10,46 +10,22 @@ import java.util.List;
 public class MapeamentoRepository {
 
     public void salvar(MapeamentoDescricao m) {
-        String sql = "INSERT OR REPLACE INTO mapeamentos_descricao (padrao, categoria_id, detalhe) VALUES (?,?,?)";
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, m.getPadrao());
-            ps.setInt(2, m.getCategoriaId());
-            ps.setString(3, m.getDetalhe());
-            ps.executeUpdate();
+        try (Connection conn = DatabaseManager.getConnection()) {
+            salvar(conn, m);
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao salvar mapeamento: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Busca o mapeamento cujo padrão está contido no título informado.
-     * Ex: padrão "Vindi *Leds" encontra "Vindi *Leds - Parcela 2/10"
-     * Ordena por LENGTH(padrao) DESC para preferir o match mais específico.
-     */
-    public MapeamentoDescricao buscarPorTitulo(String titulo) {
-        String sql = """
-            SELECT m.id, m.padrao, m.categoria_id, c.nome AS categoria_nome, m.detalhe
-            FROM mapeamentos_descricao m
-            JOIN categorias c ON c.id = m.categoria_id
-            WHERE ? LIKE '%' || m.padrao || '%' COLLATE NOCASE
-            ORDER BY LENGTH(m.padrao) DESC
-            LIMIT 1
-        """;
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, titulo);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return new MapeamentoDescricao(
-                        rs.getInt("id"), rs.getString("padrao"),
-                        rs.getInt("categoria_id"), rs.getString("categoria_nome"),
-                        rs.getString("detalhe"));
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao buscar mapeamento: " + e.getMessage(), e);
+    /** Insere ou substitui o mapeamento de mesmo padrão, usando uma conexão já aberta. */
+    public void salvar(Connection conn, MapeamentoDescricao m) throws SQLException {
+        String sql = "INSERT OR REPLACE INTO mapeamentos_descricao (padrao, categoria_id, detalhe) VALUES (?,?,?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, m.getPadrao());
+            ps.setInt(2, m.getCategoriaId());
+            ps.setString(3, m.getDetalhe());
+            ps.executeUpdate();
         }
-        return null;
     }
 
     public List<MapeamentoDescricao> listarTodos() {

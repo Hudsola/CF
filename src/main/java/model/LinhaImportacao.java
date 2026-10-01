@@ -11,6 +11,10 @@ public class LinhaImportacao {
     private final StringProperty detalhe         = new SimpleStringProperty();
     private final BooleanProperty importar        = new SimpleBooleanProperty(true);
     private final BooleanProperty mapeamentoNovo  = new SimpleBooleanProperty(false);
+    private final StringProperty observacao      = new SimpleStringProperty("");
+
+    /** Mapeamento encontrado na leitura (null quando a linha não tinha mapeamento). */
+    private MapeamentoDescricao mapeamentoOriginal;
 
     public LinhaImportacao(String titulo, double valor, LocalDate data) {
         this.titulo.set(titulo);
@@ -26,6 +30,7 @@ public class LinhaImportacao {
     public StringProperty detalheProperty()           { return detalhe; }
     public BooleanProperty importarProperty()         { return importar; }
     public BooleanProperty mapeamentoNovoProperty()   { return mapeamentoNovo; }
+    public StringProperty observacaoProperty()        { return observacao; }
 
     public String getTitulo()         { return titulo.get(); }
     public double getValor()          { return valor.get(); }
@@ -34,8 +39,15 @@ public class LinhaImportacao {
     public String getDetalhe()        { return detalhe.get(); }
     public boolean isImportar()       { return importar.get(); }
     public boolean isMapeamentoNovo() { return mapeamentoNovo.get(); }
+    public String getObservacao()     { return observacao.get(); }
+    public MapeamentoDescricao getMapeamentoOriginal() { return mapeamentoOriginal; }
 
     public void setCategoria(Categoria c)     { categoria.set(c); }
     public void setDetalhe(String d)          { detalhe.set(d); }
     public void setMapeamentoNovo(boolean b)  { mapeamentoNovo.set(b); }
+    public void setData(LocalDate d)  { data.set(d); }
+    public void setTitulo(String t)   { titulo.set(t); }
+    public void setImportar(boolean b)        { importar.set(b); }
+    public void setObservacao(String o)       { observacao.set(o); }
+    public void setMapeamentoOriginal(MapeamentoDescricao m) { mapeamentoOriginal = m; }
 }

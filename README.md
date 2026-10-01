@@ -1,127 +1,107 @@
 # Controle Financeiro Pessoal
 
-Sistema de controle financeiro pessoal desenvolvido em Java com persistência em SQLite, replicando a lógica de uma planilha de receitas e gastos.
+Aplicativo desktop de controle financeiro pessoal em **Java 17 + JavaFX**, com dados guardados localmente em **SQLite**. Ele substitui uma planilha de receitas e gastos.
 
 ---
 
 ## Funcionalidades
 
-- **Categorias** — cadastro, edição, listagem e exclusão de categorias de despesa
-- **Contas** — gerenciamento de contas bancárias/carteiras usadas em todos os lançamentos
-- **Receitas** — registro de entradas com origem, valor, conta e data
-- **Despesas** — registro de saídas por categoria, detalhamento, conta e data
-- **Investimentos** — registro de aportes por tipo, conta e data
-- **Lançamentos Fixos** — cadastro de recorrentes (ex: Salário, Condomínio, Internet) aplicáveis a qualquer mês com um comando, sem duplicação
-- **Relatórios** — resumo mensal e anual com % da renda gasta, % investida, saldo acumulado e divisão por categoria/origem/tipo
+- **Home**: saldo geral, gráficos de receitas e despesas do mês atual e lista dos lançamentos fixos ativos
+- **Cadastros**
+  - **Receitas e Despesas**: cadastro, edição e exclusão; despesas com filtro por categoria, mês e ano
+  - **Investimentos**: cadastro e exclusão
+  - **Importar CSV** (aba Despesas): importa extratos/faturas (ex: Nubank `date,title,amount`) com preview editável
+    - aceita UTF-8 ou Windows-1252 (CSV salvo pelo Excel), separador `,` ou `;`, datas `aaaa-mm-dd` ou `dd/mm/aaaa` e valores `1.234,56` ou `1234.56`
+    - linhas com erro são puladas e listadas, sem cancelar o resto
+    - pagamentos e estornos (valores negativos) e despesas que já existem na conta (mesma data e valor) vêm desmarcados
+    - **aprende** a categoria e o detalhe de cada descrição para as próximas importações
+    - a gravação é feita numa única transação: ou importa tudo, ou nada
+  - **Fixos**: lançamentos recorrentes (salário, aluguel, internet…) aplicados a um intervalo de meses sem duplicar
+  - **Categorias e Contas**
+- **Resumo**: % da renda gasta, % investida, saldo do período, tabela mês a mês com saldo acumulado e divisão por origem, categoria e tipo
+
+Regra de saldo usada em todo o app: **saldo = receitas − despesas − investimentos**.
 
 ---
 
 ## Tecnologias
 
-- Java 17+
-- SQLite via JDBC ([sqlite-jdbc](https://github.com/xerial/sqlite-jdbc))
-- Sem frameworks externos — apenas Java puro e a biblioteca do driver
+- Java 17+, JavaFX 21
+- SQLite via [sqlite-jdbc](https://github.com/xerial/sqlite-jdbc)
+- Maven (build, JAR executável, empacotamento nativo com `jpackage`)
+- JUnit 5 + JaCoCo (cobertura mínima de 70% fora da camada de interface)
+- GitHub Actions (testes, JAR e instaladores para Windows, Linux e macOS)
 
 ---
 
-## Estrutura do projeto
+## Estrutura
 
 ```
-ControleFinanceiro/
-├── lib/
-│   └── sqlite-jdbc-*.jar        ← driver SQLite (baixar manualmente, ver abaixo)
-├── src/
-│   ├── Main.java                ← menu interativo principal
-│   ├── db/
-│   │   └── DatabaseManager.java ← conexão e criação das tabelas
-│   ├── model/
-│   │   ├── Categoria.java
-│   │   ├── Conta.java
-│   │   ├── Receita.java
-│   │   ├── Despesa.java
-│   │   ├── Investimento.java
-│   │   ├── LancamentoFixo.java
-│   │   └── ResumoMensal.java
-│   ├── repository/
-│   │   ├── CategoriaRepository.java
-│   │   ├── ContaRepository.java
-│   │   ├── ReceitaRepository.java
-│   │   ├── DespesaRepository.java
-│   │   ├── InvestimentoRepository.java
-│   │   └── LancamentoFixoRepository.java
-│   ├── service/
-│   │   └── ControleFinanceiro.java
-│   └── util/
-│       └── InputValidator.java
-└── out/                         ← criado durante a compilação
+src/main/java/
+├── db/           DatabaseManager — conexão e criação das tabelas
+├── model/        entidades (Receita, Despesa, Investimento, LancamentoFixo, …)
+├── repository/   acesso ao banco (SQL)
+├── service/      ControleFinanceiro (regras e cálculos) e Conversor (valores/datas)
+└── ui/           App, Launcher e telas JavaFX (home, cadastros, resumo, components)
+src/main/resources/css/dark-theme.css
+src/test/java/    testes de repositórios e serviço (banco temporário por teste)
 ```
 
 ---
 
-## Pré-requisitos
+## Como executar
 
-- **JDK 17 ou superior** → https://adoptium.net
-- **Driver JDBC do SQLite** → https://github.com/xerial/sqlite-jdbc/releases/latest
+Pré-requisitos: **JDK 17+** e **Maven 3.8+**.
 
-Baixe o arquivo `sqlite-jdbc-X.X.X.X.jar` e coloque na pasta `lib/`.
-
----
-
-## Compilar e executar
-
-**Linux / macOS**
 ```bash
-mkdir -p out
-javac -cp "lib/*" -d out -sourcepath src src/Main.java
-java -cp "out:lib/*" Main
+# Rodar direto pelo Maven
+mvn javafx:run
+
+# Ou gerar o JAR executável e rodar
+mvn package
+java -jar target/controle-financeiro-1.0.0.jar
 ```
 
-**Windows**
-```cmd
-mkdir out
-javac -cp "lib\*" -d out -sourcepath src src\Main.java
-java -cp "out;lib\*" Main
-```
+O JAR gerado só traz os componentes nativos do JavaFX do sistema onde foi compilado. Para usar em outro sistema, compile nele ou use o instalador gerado pelo CI.
 
-O banco de dados `controle_financeiro.db` é criado automaticamente na pasta onde o programa for executado. Os dados persistem entre execuções.
+Instalador Windows (`.exe`) local, exige o [WiX Toolset](https://wixtoolset.org):
+
+```bash
+mvn package -Pexe
+```
 
 ---
 
 ## Banco de dados
 
-| Tabela               | Descrição                                              |
-|----------------------|--------------------------------------------------------|
-| `categorias`         | Categorias de despesa (ex: Moradia, Alimentação)       |
-| `contas`             | Contas financeiras (ex: Nubank, Carteira)              |
-| `receitas`           | Entradas financeiras                                   |
-| `despesas`           | Saídas financeiras por categoria                       |
-| `investimentos`      | Aportes em investimentos                               |
-| `lancamentos_fixos`  | Lançamentos recorrentes mensais                        |
-| `aplicacoes_fixos`   | Controle de quais meses cada fixo já foi aplicado      |
+O arquivo `controle_financeiro.db` é criado na pasta onde o app é executado. Ele contém seus dados pessoais e **não é versionado** (está no `.gitignore`). Faça backup copiando esse arquivo.
 
-Nomes de categorias e contas são únicos sem distinção de maiúsculas/minúsculas (`COLLATE NOCASE`).
+| Tabela                  | Descrição                                          |
+|-------------------------|----------------------------------------------------|
+| `categorias`            | Categorias de despesa (9 padrão criadas sozinhas)  |
+| `contas`                | Contas financeiras (ex: Nubank, Carteira)          |
+| `receitas`              | Entradas                                           |
+| `despesas`              | Saídas por categoria                               |
+| `investimentos`         | Aportes                                            |
+| `lancamentos_fixos`     | Lançamentos recorrentes                            |
+| `aplicacoes_fixos`      | Em quais meses cada fixo já foi aplicado           |
+| `mapeamentos_descricao` | Regras aprendidas na importação de CSV             |
+| `usuarios`              | Perfil exibido na Home                             |
 
-> **Atenção ao atualizar de uma versão anterior:** se o arquivo `controle_financeiro.db` já existir, apague-o antes de executar para que as tabelas sejam recriadas com as definições atuais (incluindo `COLLATE NOCASE`).
+As chaves estrangeiras são verificadas (`foreign_keys` ligado), então não é possível gravar lançamentos com conta ou categoria inexistente.
 
----
-
-## Ordem recomendada de uso
-
-1. Cadastre suas **Contas** (ex: Nubank, Itaú, Carteira)
-2. Verifique ou adicione **Categorias** (9 padrão já são inseridas automaticamente)
-3. Cadastre **Lançamentos Fixos** para receitas e despesas recorrentes
-4. No início de cada mês, vá em **Lançamentos Fixos → Aplicar em mês**
-5. Registre manualmente as **Receitas**, **Despesas** e **Investimentos** variáveis
-6. Consulte os **Relatórios** para acompanhar o período
+Para inspecionar o banco: [DB Browser for SQLite](https://sqlitebrowser.org). Feche o app antes de editar por lá.
 
 ---
 
-## Para inspecionar o banco
+## Testes
 
-Use o **DB Browser for SQLite** (gratuito): https://sqlitebrowser.org
+```bash
+mvn verify    # testes + relatório e verificação de cobertura (target/site/jacoco/index.html)
+```
 
 ---
 
 ## Licença
 
-MIT — veja [LICENSE](LICENSE) para detalhes.
+MIT — veja [LICENSE](LICENSE).

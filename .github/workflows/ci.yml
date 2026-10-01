@@ -26,11 +26,8 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Executar testes e gerar relatório de cobertura
-        run: mvn test jacoco:report --no-transfer-progress
-
-      - name: Verificar cobertura mínima (70%)
-        run: mvn jacoco:check --no-transfer-progress
+      - name: Testes, relatório de cobertura e verificação do mínimo de 70%
+        run: mvn verify --no-transfer-progress
 
       - name: Upload relatório JaCoCo
         uses: actions/upload-artifact@v4
@@ -102,7 +99,7 @@ jobs:
           jpackage \
             --input target \
             --main-jar controle-financeiro-1.0.0.jar \
-            --main-class ui.App \
+            --main-class ui.Launcher \
             --name "ControleFinanceiro" \
             --app-version 1.0.0 \
             --type deb \
@@ -114,7 +111,7 @@ jobs:
           jpackage `
             --input target `
             --main-jar controle-financeiro-1.0.0.jar `
-            --main-class ui.App `
+            --main-class ui.Launcher `
             --name "ControleFinanceiro" `
             --app-version 1.0.0 `
             --type exe `
@@ -128,7 +125,7 @@ jobs:
           jpackage \
             --input target \
             --main-jar controle-financeiro-1.0.0.jar \
-            --main-class ui.App \
+            --main-class ui.Launcher \
             --name "ControleFinanceiro" \
             --app-version 1.0.0 \
             --type dmg \

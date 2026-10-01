@@ -54,6 +54,17 @@ public class ReceitaRepository {
         return lista;
     }
 
+    public List<Receita> listarFiltrado(String mes, Integer ano) {
+
+        if (ano == null)
+            return listarTodos();
+
+        if ("Todos".equalsIgnoreCase(mes))
+            return listarPorAno(ano);
+
+        return listarPorMesAno(mes, ano);
+    }
+
     public void excluir(int id) {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement("DELETE FROM receitas WHERE id=?")) {
@@ -79,5 +90,49 @@ public class ReceitaRepository {
         return new Receita(rs.getInt("id"), rs.getString("origem"), rs.getDouble("valor"),
             rs.getInt("conta_id"), rs.getString("conta_nome"),
             LocalDate.parse(rs.getString("data")), rs.getString("mes"), rs.getInt("ano"));
+    }
+
+    public List<Receita> pesquisar(String origem, String mes, Integer ano) {
+
+        StringBuilder sql = new StringBuilder(SELECT_BASE + "WHERE 1=1 ");
+        List<Object> parametros = new ArrayList<>();
+
+        if (origem != null && !origem.equalsIgnoreCase("Todas")) {
+            sql.append("AND r.origem = ? ");
+            parametros.add(origem);
+        }
+
+        if (mes != null && !mes.equalsIgnoreCase("Todos")) {
+            sql.append("AND r.mes = ? ");
+            parametros.add(mes);
+        }
+
+        if (ano != null) {
+            sql.append("AND r.ano = ? ");
+            parametros.add(ano);
+        }
+
+        sql.append("ORDER BY r.data DESC");
+
+        List<Receita> lista = new ArrayList<>();
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < parametros.size(); i++) {
+                ps.setObject(i + 1, parametros.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                lista.add(map(rs));
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao pesquisar receitas.", e);
+        }
+
+        return lista;
     }
 }

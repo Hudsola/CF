@@ -15,7 +15,7 @@
         <sqlite.version>3.47.1.0</sqlite.version>
         <junit.version>5.10.2</junit.version>
         <jacoco.version>0.8.11</jacoco.version>
-        <main.class>ui.App</main.class>
+        <main.class>ui.Launcher</main.class>
     </properties>
     <dependencies>
         <dependency>
@@ -62,7 +62,8 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>${main.class}</mainClass>
+                    <!-- mvn javafx:run usa o module path, então pode iniciar o App direto -->
+                    <mainClass>com.controlefinanceiro/ui.App</mainClass>
                 </configuration>
             </plugin>
             <plugin>
@@ -178,7 +179,7 @@
                                         <argument>--input</argument>
                                         <argument>${project.build.directory}</argument>
                                         <argument>--name</argument>
-                                        <argument>MyCareer</argument>
+                                        <argument>ControleFinanceiro</argument>
                                         <argument>--main-jar</argument>
                                         <argument>${project.build.finalName}.jar</argument>
                                         <argument>--main-class</argument>

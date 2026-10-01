@@ -1,10 +1,19 @@
 package service;
 
+import db.DatabaseManager;
 import model.*;
 import repository.*;
-import java.io.BufferedReader;
-import java.io.FileReader;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.*;
@@ -121,11 +130,27 @@ public class ControleFinanceiro {
 
     // --- Lançamentos Fixos ---
     public void salvarLancamentoFixo(LancamentoFixo lf) {
+        validarFixo(lf);
         fixoRepo.salvar(lf);
     }
 
     public void atualizarLancamentoFixo(LancamentoFixo lf) {
+        validarFixo(lf);
         fixoRepo.atualizar(lf);
+    }
+
+    private void validarFixo(LancamentoFixo lf) {
+        if (lf.getTipo() == LancamentoFixo.Tipo.DESPESA && lf.getCategoriaId() <= 0)
+            throw new IllegalArgumentException("Lançamento fixo de despesa precisa de uma categoria.");
+        if (lf.getValor() <= 0)
+            throw new IllegalArgumentException("Valor deve ser maior que zero.");
+    }
+
+    /** Converte "março", "Março" ou "MARÇO" no nome padronizado; erro se não for um mês. */
+    private static String normalizarMes(String mes) {
+        String m = mes == null ? "" : mes.trim().toUpperCase(Locale.ROOT);
+        if (!MESES.contains(m)) throw new IllegalArgumentException("Mês inválido: \"" + mes + "\".");
+        return m;
     }
 
     public void excluirLancamentoFixo(int id) {
@@ -144,11 +169,12 @@ public class ControleFinanceiro {
         return fixoRepo.listarAtivos();
     }
 
-    public int aplicarFixosMes(String mes, int ano) {
+    public int aplicarFixosMes(String mesInformado, int ano) {
+        String mes = normalizarMes(mesInformado);
+        YearMonth ym = YearMonth.of(ano, MESES.indexOf(mes) + 1);
         int aplicados = 0;
         for (LancamentoFixo lf : fixoRepo.listarAtivos()) {
             if (fixoRepo.jaAplicado(lf.getId(), mes, ano)) continue;
-            YearMonth ym = YearMonth.of(ano, MESES.indexOf(mes.toUpperCase()) + 1);
             int dia = Math.min(lf.getDiaVencimento(), ym.lengthOfMonth());
             LocalDate data = LocalDate.of(ano, ym.getMonthValue(), dia);
             switch (lf.getTipo()) {
@@ -167,8 +193,10 @@ public class ControleFinanceiro {
 
     public int aplicarFixosIntervalo(String mesInicio, int anoInicio, String mesFim, int anoFim) {
         int total = 0;
-        YearMonth atual = YearMonth.of(anoInicio, MESES.indexOf(mesInicio.toUpperCase()) + 1);
-        YearMonth fim = YearMonth.of(anoFim, MESES.indexOf(mesFim.toUpperCase()) + 1);
+        YearMonth atual = YearMonth.of(anoInicio, MESES.indexOf(normalizarMes(mesInicio)) + 1);
+        YearMonth fim = YearMonth.of(anoFim, MESES.indexOf(normalizarMes(mesFim)) + 1);
+        if (atual.isAfter(fim))
+            throw new IllegalArgumentException("O mês inicial deve ser anterior ou igual ao mês final.");
 
         while (!atual.isAfter(fim)) {
             String mes = MESES.get(atual.getMonthValue() - 1);
@@ -180,64 +208,179 @@ public class ControleFinanceiro {
 
     // --- Importação CSV ---
 
-    public List<LinhaImportacao> lerCsv(String caminho) throws Exception {
+    /**
+     * Lê um extrato CSV (ex: fatura do Nubank: date,title,amount) e monta o preview da importação.
+     * Linhas com erro são puladas e descritas em {@code erros}; valores negativos (pagamentos,
+     * estornos) e despesas que já existem na conta vêm desmarcadas.
+     */
+    public ResultadoLeituraCsv lerCsv(String caminho, int contaId) throws IOException {
+        List<String> texto = lerLinhasArquivo(Path.of(caminho));
         List<LinhaImportacao> linhas = new ArrayList<>();
-        try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(caminho))) {
-            String linha;
-            boolean primeira = true;
-            while ((linha = br.readLine()) != null) {
-                if (primeira) { primeira = false; continue; }
-                if (linha.isBlank()) continue;
-                String[] partes = parseLinhaCsv(linha);
-                if (partes.length < 3) continue;
-                LocalDate data = LocalDate.parse(partes[0].trim());
-                String titulo  = partes[1].trim();
-                double valor   = Double.parseDouble(
-                        partes[2].trim().replace("\"", "").replace(",", "."));
+        List<String> erros = new ArrayList<>();
+        if (texto.isEmpty()) return new ResultadoLeituraCsv(linhas, erros);
+
+        String cabecalho = texto.get(0);
+        char sep = cabecalho.indexOf(';') >= 0 && cabecalho.indexOf(',') < 0 ? ';' : ',';
+        int[] col = localizarColunas(parseLinhaCsv(cabecalho, sep));
+        int ultimaColuna = Math.max(col[0], Math.max(col[1], col[2]));
+
+        List<Categoria> categorias = getCategorias();
+        List<MapeamentoDescricao> mapeamentos = mapeamentoRepo.listarTodos();
+
+        for (int n = 1; n < texto.size(); n++) {
+            String linha = texto.get(n);
+            if (linha.isBlank()) continue;
+            try {
+                String[] partes = parseLinhaCsv(linha, sep);
+                if (partes.length <= ultimaColuna)
+                    throw new IllegalArgumentException("colunas insuficientes.");
+                LocalDate data = Conversor.parseData(partes[col[0]]);
+                String titulo  = partes[col[1]].trim();
+                double valor   = Conversor.parseValor(partes[col[2]]);
 
                 LinhaImportacao li = new LinhaImportacao(titulo, valor, data);
-                MapeamentoDescricao map = mapeamentoRepo.buscarPorTitulo(titulo);
+                MapeamentoDescricao map = buscarMapeamento(mapeamentos, titulo);
                 if (map != null) {
-                    Categoria cat = getCategorias().stream()
-                            .filter(c -> c.getId() == map.getCategoriaId())
-                            .findFirst().orElse(null);
-                    li.setCategoria(cat);
+                    li.setMapeamentoOriginal(map);
+                    categorias.stream().filter(c -> c.getId() == map.getCategoriaId())
+                            .findFirst().ifPresent(li::setCategoria);
                     li.setDetalhe(map.getDetalhe());
                 } else {
                     li.setMapeamentoNovo(true);
                 }
+                if (valor <= 0) {
+                    li.setImportar(false);
+                    li.setObservacao("Crédito/estorno");
+                }
                 linhas.add(li);
+            } catch (IllegalArgumentException e) {
+                erros.add("Linha " + (n + 1) + ": " + e.getMessage());
             }
         }
-        return linhas;
+        marcarDuplicadas(linhas, contaId);
+        return new ResultadoLeituraCsv(linhas, erros);
     }
 
+    /**
+     * Grava as linhas marcadas como despesas da conta, numa única transação: ou tudo é importado
+     * ou nada é. Também aprende mapeamentos novos e atualiza os existentes cuja categoria mudou.
+     */
     public int confirmarImportacao(List<LinhaImportacao> linhas, int contaId) {
-        int importados = 0;
-        for (LinhaImportacao li : linhas) {
-            if (!li.isImportar() || li.getCategoria() == null) continue;
-            String mes = li.getData().getMonth()
-                    .getDisplayName(java.time.format.TextStyle.FULL, new java.util.Locale("pt", "BR"))
-                    .toUpperCase();
-            salvarDespesa(new Despesa(
-                    li.getCategoria().getId(), li.getDetalhe(),
-                    li.getValor(), contaId, li.getData(), mes, li.getData().getYear()));
-            if (li.isMapeamentoNovo()) {
-                mapeamentoRepo.salvar(new MapeamentoDescricao(
-                        li.getTitulo(), li.getCategoria().getId(), li.getDetalhe()));
-            }
-            importados++;
+        List<LinhaImportacao> selecionadas = linhas.stream().filter(LinhaImportacao::isImportar).toList();
+        for (LinhaImportacao li : selecionadas) {
+            if (li.getCategoria() == null)
+                throw new IllegalArgumentException("\"" + li.getTitulo() + "\" está sem categoria.");
+            if (li.getValor() <= 0)
+                throw new IllegalArgumentException("\"" + li.getTitulo() + "\" tem valor negativo ou zero e não pode virar despesa.");
+            if (li.getDetalhe() == null || li.getDetalhe().isBlank())
+                throw new IllegalArgumentException("\"" + li.getTitulo() + "\" está sem detalhe.");
         }
-        return importados;
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                for (LinhaImportacao li : selecionadas) {
+                    int catId = li.getCategoria().getId();
+                    despesaRepo.salvar(conn, new Despesa(catId, li.getDetalhe(), li.getValor(), contaId,
+                            li.getData(), Conversor.nomeMes(li.getData()), li.getData().getYear()));
+
+                    MapeamentoDescricao original = li.getMapeamentoOriginal();
+                    if (original == null) {
+                        mapeamentoRepo.salvar(conn, new MapeamentoDescricao(li.getTitulo(), catId, li.getDetalhe()));
+                    } else if (original.getCategoriaId() != catId) {
+                        mapeamentoRepo.salvar(conn, new MapeamentoDescricao(original.getPadrao(), catId, li.getDetalhe()));
+                    }
+                }
+                conn.commit();
+            } catch (SQLException | RuntimeException e) {
+                conn.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao importar despesas (nada foi gravado): " + e.getMessage(), e);
+        }
+        return selecionadas.size();
     }
 
-    private String[] parseLinhaCsv(String linha) {
+    /** Lê o arquivo como UTF-8; se não for UTF-8 válido, usa Windows-1252 (padrão do Excel no Windows). */
+    static List<String> lerLinhasArquivo(Path arquivo) throws IOException {
+        byte[] bytes = Files.readAllBytes(arquivo);
+        String texto;
+        try {
+            texto = StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(bytes)).toString();
+        } catch (CharacterCodingException e) {
+            texto = new String(bytes, Charset.forName("windows-1252"));
+        }
+        if (texto.startsWith("﻿")) texto = texto.substring(1);
+        return texto.lines().toList();
+    }
+
+    /** Índices das colunas [data, descrição, valor] pelo cabeçalho; sem cabeçalho reconhecido usa 0, 1, 2. */
+    private static int[] localizarColunas(String[] cabecalho) {
+        int data = -1, titulo = -1, valor = -1;
+        for (int i = 0; i < cabecalho.length; i++) {
+            String h = cabecalho[i].trim().toLowerCase(Locale.ROOT);
+            if (data < 0 && (h.equals("date") || h.equals("data"))) data = i;
+            else if (titulo < 0 && (h.equals("title") || h.startsWith("descri") || h.startsWith("hist"))) titulo = i;
+            else if (valor < 0 && (h.equals("amount") || h.equals("valor"))) valor = i;
+        }
+        if (data < 0 || titulo < 0 || valor < 0) return new int[]{0, 1, 2};
+        return new int[]{data, titulo, valor};
+    }
+
+    /** Mapeamento cujo padrão aparece no título; havendo vários, o mais específico (mais longo). */
+    private static MapeamentoDescricao buscarMapeamento(List<MapeamentoDescricao> mapeamentos, String titulo) {
+        String t = titulo.toLowerCase(Locale.ROOT);
+        return mapeamentos.stream()
+                .filter(m -> t.contains(m.getPadrao().toLowerCase(Locale.ROOT)))
+                .max(Comparator.comparingInt(m -> m.getPadrao().length()))
+                .orElse(null);
+    }
+
+    /**
+     * Desmarca linhas que já existem como despesa na conta (mesma data e valor). A contagem é por
+     * ocorrência: se o banco tem 1 despesa igual e o CSV tem 2, só a primeira é desmarcada.
+     */
+    private void marcarDuplicadas(List<LinhaImportacao> linhas, int contaId) {
+        List<LinhaImportacao> candidatas = linhas.stream().filter(l -> l.getValor() > 0).toList();
+        if (candidatas.isEmpty()) return;
+        LocalDate ini = candidatas.stream().map(LinhaImportacao::getData).min(LocalDate::compareTo).orElseThrow();
+        LocalDate fim = candidatas.stream().map(LinhaImportacao::getData).max(LocalDate::compareTo).orElseThrow();
+
+        Map<String, Integer> existentes = new HashMap<>();
+        for (Despesa d : despesaRepo.listarPorContaEPeriodo(contaId, ini, fim))
+            existentes.merge(chaveDuplicidade(d.getData(), d.getValor()), 1, Integer::sum);
+
+        for (LinhaImportacao li : candidatas) {
+            String chave = chaveDuplicidade(li.getData(), li.getValor());
+            int qtd = existentes.getOrDefault(chave, 0);
+            if (qtd > 0) {
+                existentes.put(chave, qtd - 1);
+                li.setImportar(false);
+                li.setObservacao("Já importada?");
+            }
+        }
+    }
+
+    private static String chaveDuplicidade(LocalDate data, double valor) {
+        return data + "|" + Math.round(valor * 100);
+    }
+
+    /** Divide uma linha CSV respeitando aspas ("a, b") e aspas escapadas (""). */
+    private static String[] parseLinhaCsv(String linha, char sep) {
         List<String> campos = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
         boolean dentroAspas = false;
-        for (char c : linha.toCharArray()) {
-            if (c == '"') { dentroAspas = !dentroAspas; }
-            else if (c == ',' && !dentroAspas) { campos.add(sb.toString()); sb.setLength(0); }
+        for (int i = 0; i < linha.length(); i++) {
+            char c = linha.charAt(i);
+            if (c == '"') {
+                if (dentroAspas && i + 1 < linha.length() && linha.charAt(i + 1) == '"') { sb.append('"'); i++; }
+                else dentroAspas = !dentroAspas;
+            }
+            else if (c == sep && !dentroAspas) { campos.add(sb.toString()); sb.setLength(0); }
             else { sb.append(c); }
         }
         campos.add(sb.toString());
@@ -305,7 +448,7 @@ public class ControleFinanceiro {
     public double porcentagemRendaInvestida(int ano, String mes) {
         double rec = todos(mes) ? somarReceitasAno(ano) : somarReceitas(mes, ano);
         double inv = todos(mes) ? somarInvestimentosAno(ano) : somarInvestimentos(mes, ano);
-        return rec == 0 ? 0 : -inv / rec;
+        return rec == 0 ? 0 : inv / rec;
     }
 
     public double saldoEmConta(int ano, String mes) {
@@ -369,7 +512,7 @@ public class ControleFinanceiro {
             rm.setPessoais(somarDespesas("Pessoais", mes, ano));
             rm.setLazer(somarDespesas("Lazer", mes, ano));
             rm.setFinanceiros(somarDespesas("Financeiros", mes, ano));
-            double saldo = rec + inv - desp;
+            double saldo = rec - desp - inv;   // mesma regra de saldoEmConta()
             rm.setSaldo(saldo);
             saldoAcum += saldo;
             rm.setSaldoAcumulado(saldoAcum);
@@ -384,5 +527,17 @@ public class ControleFinanceiro {
         getDespesas().forEach(d -> anos.add(d.getAno()));
         getInvestimentos().forEach(i -> anos.add(i.getAno()));
         return new ArrayList<>(anos);
+    }
+
+    public List<Despesa> pesquisarDespesas(Integer categoriaId, String mes, int ano) {
+        return despesaRepo.pesquisar(categoriaId, mes, ano);
+    }
+
+    public List<Receita> pesquisarReceitas(String origem, String mes, int ano) {
+        return receitaRepo.pesquisar(origem, mes, ano);
+    }
+
+    public List<Investimento> pesquisarInvestimentos(String tipo, String mes, int ano) {
+        return investRepo.pesquisar(tipo, mes, ano);
     }
 }

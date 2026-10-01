@@ -15,9 +15,8 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import model.*;
 import service.ControleFinanceiro;
+import service.Conversor;
 
-import java.time.format.TextStyle;
-import java.util.Locale;
 
 public class CadastrosView {
 
@@ -31,13 +30,44 @@ public class CadastrosView {
         tabs.getStyleClass().add("cadastros-tabs");
         tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
 
+        Tab tabReceitas      = new Tab("Receitas");
+        Tab tabDespesas      = new Tab("Despesas");
+        Tab tabInvestimentos = new Tab("Investimentos");
+        Tab tabFixos         = new Tab("Fixos");
+        Tab tabCategorias    = new Tab("Categorias");
+        Tab tabContas        = new Tab("Contas");
+
+        // Carrega o conteúdo inicial
+        tabReceitas.setContent(abaReceitas());
+        tabDespesas.setContent(abaDespesas());
+        tabInvestimentos.setContent(abaInvestimentos());
+        tabFixos.setContent(abaFixos());
+        tabCategorias.setContent(abaCategorias());
+        tabContas.setContent(abaContas());
+
+        // Recarrega a aba de Despesas sempre que for selecionada
+        tabDespesas.setOnSelectionChanged(e -> {
+            if (tabDespesas.isSelected()) tabDespesas.setContent(abaDespesas());
+        });
+
+        // Recarrega a aba de Receitas (contas podem mudar)
+        tabReceitas.setOnSelectionChanged(e -> {
+            if (tabReceitas.isSelected()) tabReceitas.setContent(abaReceitas());
+        });
+
+        // Recarrega a aba de Fixos (categorias e contas podem mudar)
+        tabFixos.setOnSelectionChanged(e -> {
+            if (tabFixos.isSelected()) tabFixos.setContent(abaFixos());
+        });
+
+        // Recarrega a aba de Investimentos (contas podem mudar)
+        tabInvestimentos.setOnSelectionChanged(e -> {
+            if (tabInvestimentos.isSelected()) tabInvestimentos.setContent(abaInvestimentos());
+        });
+
         tabs.getTabs().addAll(
-            new Tab("Receitas",       abaReceitas()),
-            new Tab("Despesas",       abaDespesas()),
-            new Tab("Investimentos",  abaInvestimentos()),
-            new Tab("Fixos",          abaFixos()),
-            new Tab("Categorias",     abaCategorias()),
-            new Tab("Contas",         abaContas())
+                tabReceitas, tabDespesas, tabInvestimentos,
+                tabFixos, tabCategorias, tabContas
         );
 
         VBox.setVgrow(tabs, Priority.ALWAYS);
@@ -53,7 +83,6 @@ public class CadastrosView {
         VBox aba = new VBox(12);
         aba.setPadding(new Insets(16));
 
-        // Formulário
         GridPane form = new GridPane();
         form.setHgap(12); form.setVgap(10);
 
@@ -69,57 +98,172 @@ public class CadastrosView {
         form.addRow(2, label("Conta:"),             cbConta);
         form.addRow(3, label("Data:"),              dpData);
 
-        Button btnSalvar = new Button("Salvar Receita");
-        btnSalvar.getStyleClass().add("btn-primary");
-
-        Label lblMsg = new Label();
+        Button btnSalvar   = new Button("Salvar Receita");
+        Button btnCancelar = new Button("Cancelar Edição");
+        Label  lblMsg      = new Label();
         lblMsg.getStyleClass().add("msg-label");
+        btnSalvar.getStyleClass().add("btn-primary");
+        btnCancelar.getStyleClass().add("btn-secondary");
+        btnCancelar.setVisible(false);
+        btnCancelar.setManaged(false);
 
-        // Tabela
-        TableView<Receita> tabela = new TableView<>();
-        tabela.getStyleClass().add("dark-table");
-        tabela.setItems(javafx.collections.FXCollections.observableArrayList(cf.getReceitas()));
+        // --- Tabela estilizada ---
+        List<String>  colsReceita = List.of("ID", "ORIGEM", "VALOR", "CONTA", "DATA", "MÊS");
+        List<Integer> larsReceita = List.of(60, 200, 110, 130, 110, 90);
 
-        adicionarColuna(tabela, "ID",      "id",        60);
-        adicionarColuna(tabela, "Origem",  "origem",   200);
-        adicionarColuna(tabela, "Valor",   "valor",    100);
-        adicionarColuna(tabela, "Conta",   "contaNome",130);
-        adicionarColuna(tabela, "Data",    "data",     110);
-        adicionarColuna(tabela, "Mês",     "mes",       90);
+        VBox tabelaReceitas = criarTabelaEstilizada(colsReceita, larsReceita);
+        ScrollPane scrollReceitas = new ScrollPane(tabelaReceitas);
+        scrollReceitas.setFitToWidth(true);
+        scrollReceitas.setFitToHeight(false);
+        scrollReceitas.getStyleClass().add("main-scroll");
+        VBox.setVgrow(scrollReceitas, Priority.ALWAYS);
 
+        // --- Runnable para popular/recarregar a tabela ---
+        Runnable recarregarReceitas = () -> {
+            tabelaReceitas.getChildren().subList(1, tabelaReceitas.getChildren().size()).clear();
+            List<Receita> receitas = cf.getReceitas();
+            if (receitas.isEmpty()) {
+                Label vazio = new Label("Nenhuma receita cadastrada.");
+                vazio.getStyleClass().add("empty-label");
+                vazio.setPadding(new Insets(10));
+                tabelaReceitas.getChildren().add(vazio);
+                return;
+            }
+            for (Receita r : receitas) {
+                HBox linha = criarLinhaEstilizada(
+                        List.of(
+                                String.valueOf(r.getId()),
+                                r.getOrigem(),
+                                String.format("R$ %,.2f", r.getValor()),
+                                r.getContaNome(),
+                                r.getData().toString(),
+                                r.getMes()
+                        ),
+                        larsReceita,
+                        "#4AE87A"
+                );
+                linha.setUserData(r);
+                linha.setOnMouseClicked(ev -> {
+                    tabelaReceitas.getChildren().stream()
+                            .filter(n -> n instanceof HBox && ((HBox) n).getUserData() instanceof Receita)
+                            .forEach(n -> n.getStyleClass().remove("table-row-selected"));
+                    linha.getStyleClass().add("table-row-selected");
+                });
+                tabelaReceitas.getChildren().add(linha);
+            }
+        };
+        recarregarReceitas.run();
+
+        // --- Botões ---
+        Button btnEditar  = new Button("Editar Selecionada");
         Button btnExcluir = new Button("Excluir Selecionada");
+        btnEditar.getStyleClass().add("btn-info");
         btnExcluir.getStyleClass().add("btn-danger");
+
+        final int[] idEmEdicao = {-1};
+
+        btnEditar.setOnAction(e -> {
+            Receita sel = tabelaReceitas.getChildren().stream()
+                    .filter(n -> n instanceof HBox && n.getStyleClass().contains("table-row-selected"))
+                    .map(n -> (Receita) ((HBox) n).getUserData())
+                    .findFirst().orElse(null);
+            if (sel == null) { mostrarMsg(lblMsg, "Selecione uma receita para editar.", false); return; }
+            idEmEdicao[0] = sel.getId();
+//            cbConta.getItems().setAll(cf.getContas());
+            tfOrigem.setText(sel.getOrigem());
+            tfValor.setText(String.format("%.2f", sel.getValor()).replace(".", ","));
+            dpData.setValue(sel.getData());
+            cf.getContas().stream()
+                    .filter(c -> c.getId() == sel.getContaId())
+                    .findFirst().ifPresent(cbConta::setValue);
+            btnSalvar.setText("Atualizar Receita");
+            btnSalvar.getStyleClass().remove("btn-primary");
+            btnSalvar.getStyleClass().add("btn-info");
+            btnCancelar.setVisible(true);
+            btnCancelar.setManaged(true);
+            mostrarMsg(lblMsg, "Editando receita ID " + idEmEdicao[0], true);
+        });
+
+        btnCancelar.setOnAction(e -> {
+            idEmEdicao[0] = -1;
+            tfOrigem.clear(); tfValor.clear();
+            cbConta.setValue(null); dpData.setValue(LocalDate.now());
+            btnSalvar.setText("Salvar Receita");
+            btnSalvar.getStyleClass().remove("btn-info");
+            btnSalvar.getStyleClass().add("btn-primary");
+            btnCancelar.setVisible(false);
+            lblMsg.setText("");
+        });
 
         btnSalvar.setOnAction(e -> {
             try {
                 String origem = tfOrigem.getText().trim();
                 if (origem.isEmpty()) throw new RuntimeException("Origem é obrigatória.");
-                double valor = Double.parseDouble(tfValor.getText().trim().replace(",", "."));
-                if (valor <= 0) throw new RuntimeException("Valor deve ser maior que zero.");
+                double valor = Conversor.parseValorPositivo(tfValor.getText());
                 Conta conta = cbConta.getValue();
                 if (conta == null) throw new RuntimeException("Selecione uma conta.");
                 LocalDate data = dpData.getValue();
                 if (data == null) throw new RuntimeException("Selecione uma data.");
-                String mes = data.getMonth().getDisplayName(TextStyle.FULL, new Locale("pt","BR")).toUpperCase();
-                cf.salvarReceita(new Receita(origem, valor, conta.getId(), data, mes, data.getYear()));
-                tabela.setItems(javafx.collections.FXCollections.observableArrayList(cf.getReceitas()));
+                String mes = Conversor.nomeMes(data);
+
+                if (idEmEdicao[0] == -1) {
+                    cf.salvarReceita(new Receita(origem, valor, conta.getId(), data, mes, data.getYear()));
+                    mostrarMsg(lblMsg, "✔ Receita salva!", true);
+                } else {
+                    cf.atualizarReceita(new Receita(idEmEdicao[0], origem, valor,
+                            conta.getId(), conta.getNome(), data, mes, data.getYear()));
+                    mostrarMsg(lblMsg, "✔ Receita atualizada!", true);
+                    idEmEdicao[0] = -1;
+                    btnSalvar.setText("Salvar Receita");
+                    btnSalvar.getStyleClass().remove("btn-info");
+                    btnSalvar.getStyleClass().add("btn-primary");
+                    btnCancelar.setVisible(false);
+                }
+                recarregarReceitas.run();
                 tfOrigem.clear(); tfValor.clear();
-                lblMsg.setText("✔ Receita salva!"); lblMsg.setStyle("-fx-text-fill: #4AE87A;");
+                cbConta.setValue(null); dpData.setValue(LocalDate.now());
             } catch (Exception ex) {
-                lblMsg.setText("✖ " + ex.getMessage()); lblMsg.setStyle("-fx-text-fill: #E85C4A;");
+                mostrarMsg(lblMsg, "✖ " + ex.getMessage(), false);
             }
         });
 
         btnExcluir.setOnAction(e -> {
-            Receita sel = tabela.getSelectionModel().getSelectedItem();
-            if (sel == null) { lblMsg.setText("Selecione uma receita."); return; }
-            cf.excluirReceita(sel.getId());
-            tabela.setItems(javafx.collections.FXCollections.observableArrayList(cf.getReceitas()));
-            lblMsg.setText("✔ Excluída."); lblMsg.setStyle("-fx-text-fill: #4AE87A;");
+            Receita sel = tabelaReceitas.getChildren().stream()
+                    .filter(n -> n instanceof HBox && n.getStyleClass().contains("table-row-selected"))
+                    .map(n -> (Receita) ((HBox) n).getUserData())
+                    .findFirst().orElse(null);
+            if (sel == null) { mostrarMsg(lblMsg, "Selecione uma receita.", false); return; }
+            if (!confirmarExclusao("a receita \"" + sel.getOrigem() + "\"")) return;
+            try {
+                cf.excluirReceita(sel.getId());
+                recarregarReceitas.run();
+                mostrarMsg(lblMsg, "✔ Excluída.", true);
+            } catch (Exception ex) {
+                mostrarMsg(lblMsg, "✖ " + ex.getMessage(), false);
+            }
         });
 
-        VBox.setVgrow(tabela, Priority.ALWAYS);
-        aba.getChildren().addAll(form, new HBox(10, btnSalvar, lblMsg), new Separator(), btnExcluir, tabela);
+        // Renomeia os botões
+        btnEditar.setText("Editar");
+        btnExcluir.setText("Excluir");
+
+        HBox acoesEsquerda = new HBox(10, btnSalvar, btnCancelar);
+        acoesEsquerda.setAlignment(Pos.CENTER_LEFT);
+
+        HBox acoesDireita = new HBox(10, btnEditar, btnExcluir);
+        acoesDireita.setAlignment(Pos.CENTER_LEFT);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox acoes = new HBox(10, acoesEsquerda, spacer, acoesDireita);
+        acoes.setAlignment(Pos.CENTER_LEFT);
+
+        // Título acima da tabela igual ao da HomeView
+        Label lblTituloTabela = new Label("Receitas");
+        lblTituloTabela.getStyleClass().add("section-title");
+
+        aba.getChildren().addAll(form, acoes, new Separator(), lblTituloTabela, scrollReceitas);
         return aba;
     }
 
@@ -150,27 +294,138 @@ public class CadastrosView {
         form.addRow(3, label("Conta:"),        cbConta);
         form.addRow(4, label("Data:"),         dpData);
 
+        // --- Botões formulário ---
         Button btnSalvar   = new Button("Salvar Despesa");
         Button btnCancelar = new Button("Cancelar Edição");
         Label  lblMsg      = new Label();
-        btnSalvar.getStyleClass().add("btn-danger");
+        btnSalvar.getStyleClass().add("btn-primary"); // azul
         btnCancelar.getStyleClass().add("btn-secondary");
         btnCancelar.setVisible(false);
+        btnCancelar.setManaged(false);
 
-        TableView<Despesa> tabela = new TableView<>();
-        tabela.getStyleClass().add("dark-table");
-        tabela.setPlaceholder(new Label("Nenhuma despesa cadastrada."));
-        tabela.setItems(FXCollections.observableArrayList(cf.getDespesas()));
+        // --- Filtros ---
+        ComboBox<Categoria> cbCategoriaFiltro = new ComboBox<>();
+        cbCategoriaFiltro.getItems().add(null);
+        cbCategoriaFiltro.getItems().addAll(cf.getCategorias());
+        cbCategoriaFiltro.setPromptText("Todas");
+        cbCategoriaFiltro.getStyleClass().add("dark-combo");
 
-        adicionarColuna(tabela, "ID",        "id",            60);
-        adicionarColuna(tabela, "Categoria", "categoriaNome",130);
-        adicionarColuna(tabela, "Detalhe",   "detalhamento", 180);
-        adicionarColuna(tabela, "Valor",     "valor",        100);
-        adicionarColuna(tabela, "Conta",     "contaNome",    120);
-        adicionarColuna(tabela, "Data",      "data",         110);
+        ComboBox<String> cbMesFiltro = new ComboBox<>();
+        cbMesFiltro.getItems().addAll(ControleFinanceiro.MESES);
+        cbMesFiltro.setPromptText("Todos");
+        cbMesFiltro.getStyleClass().add("dark-combo");
 
-        Button btnEditar  = new Button("Editar Selecionada");
-        Button btnExcluir = new Button("Excluir Selecionada");
+        int anoAtual = LocalDate.now().getYear();
+        ComboBox<Integer> cbAnoFiltro = new ComboBox<>();
+        java.util.TreeSet<Integer> anos = new java.util.TreeSet<>(cf.anosDisponiveis());
+        anos.add(anoAtual);
+        cbAnoFiltro.getItems().addAll(anos.descendingSet());
+        cbAnoFiltro.setValue(anoAtual);
+        cbAnoFiltro.getStyleClass().add("dark-combo");
+
+        Button btnLimparFiltro = new Button("Limpar Filtros");
+        btnLimparFiltro.getStyleClass().add("btn-secondary");
+
+        // --- Tabela estilizada ---
+        List<String>  colsDesp = List.of("ID", "CATEGORIA", "DETALHE", "VALOR", "CONTA", "DATA");
+        List<Integer> larsDesp = List.of(60, 130, 200, 110, 120, 110);
+
+        VBox tabelaDespesas = criarTabelaEstilizada(colsDesp, larsDesp);
+        ScrollPane scrollDespesas = new ScrollPane(tabelaDespesas);
+        scrollDespesas.setFitToWidth(true);
+        scrollDespesas.setFitToHeight(false);
+        scrollDespesas.getStyleClass().add("main-scroll");
+        VBox.setVgrow(scrollDespesas, Priority.ALWAYS);
+
+        // --- Runnable para popular/recarregar ---
+        Runnable recarregarDespesas = () -> {
+            tabelaDespesas.getChildren().subList(1, tabelaDespesas.getChildren().size()).clear();
+            List<Despesa> despesas = cf.getDespesas();
+            if (despesas.isEmpty()) {
+                Label vazio = new Label("Nenhuma despesa cadastrada.");
+                vazio.getStyleClass().add("empty-label");
+                vazio.setPadding(new Insets(10));
+                tabelaDespesas.getChildren().add(vazio);
+                return;
+            }
+            for (Despesa d : despesas) {
+                HBox linha = criarLinhaEstilizada(
+                        List.of(
+                                String.valueOf(d.getId()),
+                                d.getCategoriaNome(),
+                                d.getDetalhamento(),
+                                String.format("R$ %,.2f", d.getValor()),
+                                d.getContaNome(),
+                                d.getData().toString()
+                        ),
+                        larsDesp,
+                        "#E85C4A" // vermelho para despesa
+                );
+                linha.setUserData(d);
+                linha.setOnMouseClicked(ev -> {
+                    tabelaDespesas.getChildren().stream()
+                            .filter(n -> n instanceof HBox && ((HBox) n).getUserData() instanceof Despesa)
+                            .forEach(n -> n.getStyleClass().remove("table-row-selected"));
+                    linha.getStyleClass().add("table-row-selected");
+                });
+                tabelaDespesas.getChildren().add(linha);
+            }
+        };
+        recarregarDespesas.run();
+
+        // --- Runnable filtro ---
+        Runnable aplicarFiltro = () -> {
+            Integer categoriaId = cbCategoriaFiltro.getValue() == null
+                    ? null : cbCategoriaFiltro.getValue().getId();
+            String mes = cbMesFiltro.getValue();
+            int ano = cbAnoFiltro.getValue() != null ? cbAnoFiltro.getValue() : anoAtual;
+
+            tabelaDespesas.getChildren().subList(1, tabelaDespesas.getChildren().size()).clear();
+            List<Despesa> filtradas = cf.pesquisarDespesas(categoriaId, mes, ano);
+            if (filtradas.isEmpty()) {
+                Label vazio = new Label("Nenhuma despesa encontrada.");
+                vazio.getStyleClass().add("empty-label");
+                vazio.setPadding(new Insets(10));
+                tabelaDespesas.getChildren().add(vazio);
+                return;
+            }
+            for (Despesa d : filtradas) {
+                HBox linha = criarLinhaEstilizada(
+                        List.of(
+                                String.valueOf(d.getId()),
+                                d.getCategoriaNome(),
+                                d.getDetalhamento(),
+                                String.format("R$ %,.2f", d.getValor()),
+                                d.getContaNome(),
+                                d.getData().toString()
+                        ),
+                        larsDesp,
+                        "#E85C4A"
+                );
+                linha.setUserData(d);
+                linha.setOnMouseClicked(ev -> {
+                    tabelaDespesas.getChildren().stream()
+                            .filter(n -> n instanceof HBox && ((HBox) n).getUserData() instanceof Despesa)
+                            .forEach(n -> n.getStyleClass().remove("table-row-selected"));
+                    linha.getStyleClass().add("table-row-selected");
+                });
+                tabelaDespesas.getChildren().add(linha);
+            }
+        };
+
+        cbCategoriaFiltro.setOnAction(e -> aplicarFiltro.run());
+        cbMesFiltro.setOnAction(e -> aplicarFiltro.run());
+        cbAnoFiltro.setOnAction(e -> aplicarFiltro.run());
+        btnLimparFiltro.setOnAction(e -> {
+            cbCategoriaFiltro.setValue(null);
+            cbMesFiltro.setValue(null);
+            cbAnoFiltro.setValue(anoAtual);
+            recarregarDespesas.run();
+        });
+
+        // --- Botões ação ---
+        Button btnEditar   = new Button("Editar");
+        Button btnExcluir  = new Button("Excluir");
         Button btnImportar = new Button("Importar CSV");
         btnEditar.getStyleClass().add("btn-info");
         btnExcluir.getStyleClass().add("btn-danger");
@@ -179,9 +434,14 @@ public class CadastrosView {
         final int[] idEmEdicao = {-1};
 
         btnEditar.setOnAction(e -> {
-            Despesa sel = tabela.getSelectionModel().getSelectedItem();
+            Despesa sel = tabelaDespesas.getChildren().stream()
+                    .filter(n -> n instanceof HBox && n.getStyleClass().contains("table-row-selected"))
+                    .map(n -> (Despesa) ((HBox) n).getUserData())
+                    .findFirst().orElse(null);
             if (sel == null) { mostrarMsg(lblMsg, "Selecione uma despesa para editar.", false); return; }
             idEmEdicao[0] = sel.getId();
+            cbCat.getItems().setAll(cf.getCategorias());
+            cbConta.getItems().setAll(cf.getContas());
             tfDetalhe.setText(sel.getDetalhamento());
             tfValor.setText(String.format("%.2f", sel.getValor()).replace(".", ","));
             dpData.setValue(sel.getData());
@@ -193,6 +453,7 @@ public class CadastrosView {
                     .findFirst().ifPresent(cbConta::setValue);
             btnSalvar.setText("Atualizar Despesa");
             btnCancelar.setVisible(true);
+            btnCancelar.setManaged(true);
             mostrarMsg(lblMsg, "Editando despesa ID " + idEmEdicao[0], true);
         });
 
@@ -202,6 +463,7 @@ public class CadastrosView {
             cbCat.setValue(null); cbConta.setValue(null); dpData.setValue(LocalDate.now());
             btnSalvar.setText("Salvar Despesa");
             btnCancelar.setVisible(false);
+            btnCancelar.setManaged(false);
             lblMsg.setText("");
         });
 
@@ -211,12 +473,12 @@ public class CadastrosView {
                 if (cat == null) throw new RuntimeException("Selecione uma categoria.");
                 String det = tfDetalhe.getText().trim();
                 if (det.isEmpty()) throw new RuntimeException("Detalhamento é obrigatório.");
-                double valor = Double.parseDouble(tfValor.getText().trim().replace(",", "."));
-                if (valor <= 0) throw new RuntimeException("Valor deve ser maior que zero.");
+                double valor = Conversor.parseValorPositivo(tfValor.getText());
                 Conta conta = cbConta.getValue();
                 if (conta == null) throw new RuntimeException("Selecione uma conta.");
                 LocalDate data = dpData.getValue();
-                String mes = data.getMonth().getDisplayName(TextStyle.FULL, new Locale("pt","BR")).toUpperCase();
+                if (data == null) throw new RuntimeException("Selecione uma data.");
+                String mes = Conversor.nomeMes(data);
 
                 if (idEmEdicao[0] == -1) {
                     cf.salvarDespesa(new Despesa(cat.getId(), det, valor, conta.getId(), data, mes, data.getYear()));
@@ -228,8 +490,9 @@ public class CadastrosView {
                     idEmEdicao[0] = -1;
                     btnSalvar.setText("Salvar Despesa");
                     btnCancelar.setVisible(false);
+                    btnCancelar.setManaged(false);
                 }
-                tabela.setItems(FXCollections.observableArrayList(cf.getDespesas()));
+                recarregarDespesas.run();
                 tfDetalhe.clear(); tfValor.clear();
                 cbCat.setValue(null); cbConta.setValue(null); dpData.setValue(LocalDate.now());
             } catch (Exception ex) {
@@ -238,23 +501,55 @@ public class CadastrosView {
         });
 
         btnExcluir.setOnAction(e -> {
-            Despesa sel = tabela.getSelectionModel().getSelectedItem();
+            Despesa sel = tabelaDespesas.getChildren().stream()
+                    .filter(n -> n instanceof HBox && n.getStyleClass().contains("table-row-selected"))
+                    .map(n -> (Despesa) ((HBox) n).getUserData())
+                    .findFirst().orElse(null);
             if (sel == null) { mostrarMsg(lblMsg, "Selecione uma despesa.", false); return; }
-            cf.excluirDespesa(sel.getId());
-            tabela.setItems(FXCollections.observableArrayList(cf.getDespesas()));
-            mostrarMsg(lblMsg, "✔ Excluída.", true);
+            if (!confirmarExclusao("a despesa \"" + sel.getDetalhamento() + "\"")) return;
+            try {
+                cf.excluirDespesa(sel.getId());
+                recarregarDespesas.run();
+                mostrarMsg(lblMsg, "✔ Excluída.", true);
+            } catch (Exception ex) {
+                mostrarMsg(lblMsg, "✖ " + ex.getMessage(), false);
+            }
         });
 
-        // Abre janela modal de importação CSV
         btnImportar.setOnAction(e ->
-                abrirImportacao((Stage) btnImportar.getScene().getWindow(), tabela));
+                abrirImportacao((Stage) btnImportar.getScene().getWindow(), recarregarDespesas));
 
-        HBox acoes = new HBox(10, btnSalvar, btnCancelar, lblMsg);
+        // --- Layout ---
+        HBox acoesEsquerda = new HBox(10, btnSalvar, btnCancelar);
+        acoesEsquerda.setAlignment(Pos.CENTER_LEFT);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox acoesDireita = new HBox(10, btnEditar, btnExcluir, btnImportar);
+        acoesDireita.setAlignment(Pos.CENTER_LEFT);
+
+        HBox acoes = new HBox(10, acoesEsquerda, spacer, acoesDireita);
         acoes.setAlignment(Pos.CENTER_LEFT);
-        HBox botoesTabela = new HBox(10, btnEditar, btnExcluir, btnImportar);
 
-        VBox.setVgrow(tabela, Priority.ALWAYS);
-        aba.getChildren().addAll(form, acoes, new Separator(), botoesTabela, tabela);
+        HBox filtros = new HBox(10,
+                label("Categoria:"), cbCategoriaFiltro,
+                label("Mês:"), cbMesFiltro,
+                label("Ano:"), cbAnoFiltro,
+                btnLimparFiltro);
+        filtros.setAlignment(Pos.CENTER_LEFT);
+
+        Label lblTituloTabela = new Label("Despesas");
+        lblTituloTabela.getStyleClass().add("section-title");
+
+        aba.getChildren().addAll(
+                form,
+                acoes,
+                new Separator(),
+                filtros,
+                lblTituloTabela,
+                scrollDespesas
+        );
         return aba;
     }
 
@@ -302,11 +597,12 @@ public class CadastrosView {
             try {
                 String tipo = tfTipo.getText().trim();
                 if (tipo.isEmpty()) throw new RuntimeException("Tipo é obrigatório.");
-                double valor = Double.parseDouble(tfValor.getText().trim().replace(",", "."));
+                double valor = Conversor.parseValorPositivo(tfValor.getText());
                 Conta conta = cbConta.getValue();
                 if (conta == null) throw new RuntimeException("Selecione uma conta.");
                 LocalDate data = dpData.getValue();
-                String mes = data.getMonth().getDisplayName(TextStyle.FULL, new Locale("pt","BR")).toUpperCase();
+                if (data == null) throw new RuntimeException("Selecione uma data.");
+                String mes = Conversor.nomeMes(data);
                 cf.salvarInvestimento(new Investimento(tipo, valor, conta.getId(), data, mes, data.getYear()));
                 tabela.setItems(javafx.collections.FXCollections.observableArrayList(cf.getInvestimentos()));
                 tfTipo.clear(); tfValor.clear();
@@ -318,9 +614,15 @@ public class CadastrosView {
 
         btnExcluir.setOnAction(e -> {
             Investimento sel = tabela.getSelectionModel().getSelectedItem();
-            if (sel == null) return;
-            cf.excluirInvestimento(sel.getId());
-            tabela.setItems(javafx.collections.FXCollections.observableArrayList(cf.getInvestimentos()));
+            if (sel == null) { mostrarMsg(lblMsg, "Selecione um investimento.", false); return; }
+            if (!confirmarExclusao("o investimento \"" + sel.getTipo() + "\"")) return;
+            try {
+                cf.excluirInvestimento(sel.getId());
+                tabela.setItems(javafx.collections.FXCollections.observableArrayList(cf.getInvestimentos()));
+                mostrarMsg(lblMsg, "✔ Excluído.", true);
+            } catch (Exception ex) {
+                mostrarMsg(lblMsg, "✖ " + ex.getMessage(), false);
+            }
         });
 
         VBox.setVgrow(tabela, Priority.ALWAYS);
@@ -389,9 +691,10 @@ public class CadastrosView {
                 LancamentoFixo.Tipo tipo = LancamentoFixo.Tipo.valueOf(cbTipo.getValue());
                 String desc = tfDesc.getText().trim();
                 if (desc.isEmpty()) throw new RuntimeException("Descrição obrigatória.");
-                int catId = tipo == LancamentoFixo.Tipo.DESPESA && cbCat.getValue() != null
-                    ? cbCat.getValue().getId() : 0;
-                double valor = Double.parseDouble(tfValor.getText().trim().replace(",", "."));
+                if (tipo == LancamentoFixo.Tipo.DESPESA && cbCat.getValue() == null)
+                    throw new RuntimeException("Selecione a categoria da despesa.");
+                int catId = tipo == LancamentoFixo.Tipo.DESPESA ? cbCat.getValue().getId() : 0;
+                double valor = Conversor.parseValorPositivo(tfValor.getText());
                 Conta conta = cbConta.getValue();
                 if (conta == null) throw new RuntimeException("Selecione uma conta.");
                 cf.salvarLancamentoFixo(new LancamentoFixo(tipo, desc, catId, valor, conta.getId(), spDia.getValue()));
@@ -411,15 +714,13 @@ public class CadastrosView {
 
             ComboBox<String> cbMesIni = new ComboBox<>();
             cbMesIni.getItems().addAll(ControleFinanceiro.MESES);
-            cbMesIni.setValue(LocalDate.now().getMonth()
-                    .getDisplayName(TextStyle.FULL, new Locale("pt","BR")).toUpperCase());
+            cbMesIni.setValue(Conversor.nomeMes(LocalDate.now()));
 
             Spinner<Integer> spAnoIni = new Spinner<>(2000, 2100, LocalDate.now().getYear());
 
             ComboBox<String> cbMesFim = new ComboBox<>();
             cbMesFim.getItems().addAll(ControleFinanceiro.MESES);
-            cbMesFim.setValue(LocalDate.now().getMonth()
-                    .getDisplayName(TextStyle.FULL, new Locale("pt","BR")).toUpperCase());
+            cbMesFim.setValue(Conversor.nomeMes(LocalDate.now()));
 
             Spinner<Integer> spAnoFim = new Spinner<>(2000, 2100, LocalDate.now().getYear());
 
@@ -449,16 +750,26 @@ public class CadastrosView {
 
         btnExcluir.setOnAction(e -> {
             LancamentoFixo sel = tabela.getSelectionModel().getSelectedItem();
-            if (sel == null) return;
-            cf.excluirLancamentoFixo(sel.getId());
-            tabela.setItems(javafx.collections.FXCollections.observableArrayList(cf.getLancamentosFixos()));
+            if (sel == null) { mostrarMsg(lblMsg, "Selecione um lançamento fixo.", false); return; }
+            if (!confirmarExclusao("o lançamento fixo \"" + sel.getDescricao() + "\"")) return;
+            try {
+                cf.excluirLancamentoFixo(sel.getId());
+                tabela.setItems(javafx.collections.FXCollections.observableArrayList(cf.getLancamentosFixos()));
+                mostrarMsg(lblMsg, "✔ Excluído.", true);
+            } catch (Exception ex) {
+                mostrarMsg(lblMsg, "✖ " + ex.getMessage(), false);
+            }
         });
 
         btnAlternar.setOnAction(e -> {
             LancamentoFixo sel = tabela.getSelectionModel().getSelectedItem();
-            if (sel == null) return;
-            cf.alternarAtivoFixo(sel.getId());
-            tabela.setItems(javafx.collections.FXCollections.observableArrayList(cf.getLancamentosFixos()));
+            if (sel == null) { mostrarMsg(lblMsg, "Selecione um lançamento fixo.", false); return; }
+            try {
+                cf.alternarAtivoFixo(sel.getId());
+                tabela.setItems(javafx.collections.FXCollections.observableArrayList(cf.getLancamentosFixos()));
+            } catch (Exception ex) {
+                mostrarMsg(lblMsg, "✖ " + ex.getMessage(), false);
+            }
         });
 
         VBox.setVgrow(tabela, Priority.ALWAYS);
@@ -504,7 +815,8 @@ public class CadastrosView {
 
         btnExcluir.setOnAction(e -> {
             Categoria sel = tabela.getSelectionModel().getSelectedItem();
-            if (sel == null) return;
+            if (sel == null) { mostrarMsg(lblMsg, "Selecione uma categoria.", false); return; }
+            if (!confirmarExclusao("a categoria \"" + sel.getNome() + "\"")) return;
             try {
                 cf.excluirCategoria(sel.getId());
                 tabela.setItems(javafx.collections.FXCollections.observableArrayList(cf.getCategorias()));
@@ -556,7 +868,8 @@ public class CadastrosView {
 
         btnExcluir.setOnAction(e -> {
             Conta sel = tabela.getSelectionModel().getSelectedItem();
-            if (sel == null) return;
+            if (sel == null) { mostrarMsg(lblMsg, "Selecione uma conta.", false); return; }
+            if (!confirmarExclusao("a conta \"" + sel.getNome() + "\"")) return;
             try {
                 cf.excluirConta(sel.getId());
                 tabela.setItems(javafx.collections.FXCollections.observableArrayList(cf.getContas()));
@@ -601,7 +914,16 @@ public class CadastrosView {
         lbl.setStyle(sucesso ? "-fx-text-fill: #4AE87A;" : "-fx-text-fill: #E85C4A;");
     }
 
-    private void abrirImportacao(Stage owner, TableView<Despesa> tabela) {
+    private boolean confirmarExclusao(String oQue) {
+        Alert alerta = new Alert(Alert.AlertType.CONFIRMATION,
+                "Deseja realmente excluir " + oQue + "?\nEssa ação não pode ser desfeita.",
+                ButtonType.YES, ButtonType.NO);
+        alerta.setTitle("Confirmar exclusão");
+        alerta.setHeaderText(null);
+        return alerta.showAndWait().filter(b -> b == ButtonType.YES).isPresent();
+    }
+
+    private void abrirImportacao(Stage owner, Runnable aoImportar) {
         Stage stage = new Stage();
         stage.initModality(javafx.stage.Modality.WINDOW_MODAL);
         stage.initOwner(owner);
@@ -658,13 +980,28 @@ public class CadastrosView {
         colImportar.setPrefWidth(70);
         colImportar.setEditable(true);
 
-        TableColumn<LinhaImportacao, LocalDate> colData = new TableColumn<>("Data");
-        colData.setCellValueFactory(c -> c.getValue().dataProperty());
-        colData.setPrefWidth(100);
+        TableColumn<LinhaImportacao, String> colData = new TableColumn<>("Data");
+        colData.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(
+                c.getValue().getData().toString()));
+        colData.setCellFactory(javafx.scene.control.cell.TextFieldTableCell.forTableColumn());
+        colData.setOnEditCommit(e -> {
+            try {
+                LocalDate novaData = Conversor.parseData(e.getNewValue());
+                e.getRowValue().setData(novaData);
+            } catch (Exception ex) {
+                mostrarMsg(lblStatus, "✖ " + ex.getMessage(), false);
+                tabelaPreview.refresh();
+            }
+        });
+        colData.setPrefWidth(110);
+        colData.setEditable(true);
 
         TableColumn<LinhaImportacao, String> colTitulo = new TableColumn<>("Descrição Original");
         colTitulo.setCellValueFactory(c -> c.getValue().tituloProperty());
+        colTitulo.setCellFactory(javafx.scene.control.cell.TextFieldTableCell.forTableColumn());
+        colTitulo.setOnEditCommit(e -> e.getRowValue().tituloProperty().set(e.getNewValue()));
         colTitulo.setPrefWidth(240);
+        colTitulo.setEditable(true);
 
         TableColumn<LinhaImportacao, Double> colValor = new TableColumn<>("Valor R$");
         colValor.setCellValueFactory(c -> c.getValue().valorProperty().asObject());
@@ -690,8 +1027,12 @@ public class CadastrosView {
                 c.getValue().isMapeamentoNovo() ? "⚠ Novo" : "✔ Existente"));
         colStatus.setPrefWidth(100);
 
+        TableColumn<LinhaImportacao, String> colObs = new TableColumn<>("Observação");
+        colObs.setCellValueFactory(c -> c.getValue().observacaoProperty());
+        colObs.setPrefWidth(120);
+
         tabelaPreview.getColumns().addAll(
-                colImportar, colData, colTitulo, colValor, colCategoria, colDetalhe, colStatus);
+                colImportar, colData, colTitulo, colValor, colCategoria, colDetalhe, colStatus, colObs);
 
         // Botões rodapé
         Button btnConfirmar = new Button("Confirmar Importação");
@@ -700,13 +1041,19 @@ public class CadastrosView {
 
         Button btnFechar = new Button("Fechar");
         btnFechar.getStyleClass().add("btn-secondary");
-        btnFechar.setOnAction(e -> {
-            tabela.setItems(FXCollections.observableArrayList(cf.getDespesas()));
-            stage.close();
-        });
+        btnFechar.setOnAction(e -> stage.close());
 
         HBox rodape = new HBox(10, btnConfirmar, btnFechar, lblStatus);
         rodape.setAlignment(Pos.CENTER_LEFT);
+
+        // Conta usada no preview (a checagem de duplicatas é feita contra ela)
+        final Conta[] contaDoPreview = {null};
+        cbConta.setOnAction(e -> {
+            if (contaDoPreview[0] != null && cbConta.getValue() != contaDoPreview[0]) {
+                btnConfirmar.setDisable(true);
+                mostrarMsg(lblStatus, "Conta alterada: clique em \"Carregar Preview\" novamente.", false);
+            }
+        });
 
         // Ações
         btnCarregar.setOnAction(e -> {
@@ -714,15 +1061,32 @@ public class CadastrosView {
             if (caminho.isEmpty()) { mostrarMsg(lblStatus, "Selecione um arquivo.", false); return; }
             if (cbConta.getValue() == null) { mostrarMsg(lblStatus, "Selecione uma conta.", false); return; }
             try {
-                List<LinhaImportacao> linhas = cf.lerCsv(caminho);
+                ResultadoLeituraCsv resultado = cf.lerCsv(caminho, cbConta.getValue().getId());
+                List<LinhaImportacao> linhas = resultado.linhas();
+                contaDoPreview[0] = cbConta.getValue();
                 tabelaPreview.setItems(FXCollections.observableArrayList(linhas));
-                btnConfirmar.setDisable(false);
-                long semCat = linhas.stream().filter(l -> l.getCategoria() == null).count();
+                btnConfirmar.setDisable(linhas.isEmpty());
+                long marcadas = linhas.stream().filter(LinhaImportacao::isImportar).count();
+                long semCat = linhas.stream().filter(l -> l.isImportar() && l.getCategoria() == null).count();
                 long novos  = linhas.stream().filter(LinhaImportacao::isMapeamentoNovo).count();
-                mostrarMsg(lblStatus, linhas.size() + " linha(s). " + novos + " novo(s) mapeamento(s)." +
-                        (semCat > 0 ? " ⚠ " + semCat + " sem categoria." : ""), semCat == 0);
+                long desmarcadas = linhas.size() - marcadas;
+                String msg = linhas.size() + " linha(s), " + marcadas + " marcada(s). " + novos + " novo(s) mapeamento(s)."
+                        + (desmarcadas > 0 ? " " + desmarcadas + " desmarcada(s) (estorno ou já importada)." : "")
+                        + (semCat > 0 ? " ⚠ " + semCat + " sem categoria." : "")
+                        + (resultado.erros().isEmpty() ? "" : " ⚠ " + resultado.erros().size() + " linha(s) ignorada(s) com erro.");
+                mostrarMsg(lblStatus, msg, semCat == 0 && resultado.erros().isEmpty());
+                if (!resultado.erros().isEmpty()) {
+                    Alert alerta = new Alert(Alert.AlertType.WARNING);
+                    alerta.setTitle("Linhas ignoradas");
+                    alerta.setHeaderText(resultado.erros().size() + " linha(s) do CSV não puderam ser lidas:");
+                    alerta.setContentText(String.join("\n",
+                            resultado.erros().subList(0, Math.min(15, resultado.erros().size())))
+                            + (resultado.erros().size() > 15 ? "\n…" : ""));
+                    alerta.initOwner(stage);
+                    alerta.show();
+                }
             } catch (Exception ex) {
-                mostrarMsg(lblStatus, "✖ " + ex.getMessage(), false);
+                mostrarMsg(lblStatus, "✖ Não foi possível ler o arquivo: " + ex.getMessage(), false);
             }
         });
 
@@ -733,9 +1097,15 @@ public class CadastrosView {
                 mostrarMsg(lblStatus, "✖ " + semCat + " linha(s) sem categoria. Preencha ou desmarque.", false);
                 return;
             }
-            int importados = cf.confirmarImportacao(tabelaPreview.getItems(), cbConta.getValue().getId());
-            mostrarMsg(lblStatus, "✔ " + importados + " despesa(s) importada(s)!", true);
-            btnConfirmar.setDisable(true);
+            try {
+                int importados = cf.confirmarImportacao(tabelaPreview.getItems(), contaDoPreview[0].getId());
+                mostrarMsg(lblStatus, "✔ " + importados + " despesa(s) importada(s)!", true);
+                tabelaPreview.getItems().clear();
+                btnConfirmar.setDisable(true);
+                aoImportar.run();
+            } catch (Exception ex) {
+                mostrarMsg(lblStatus, "✖ " + ex.getMessage(), false);
+            }
         });
 
         root.getChildren().addAll(topoForm, new Separator(), tabelaPreview, rodape);
@@ -746,4 +1116,43 @@ public class CadastrosView {
         stage.setScene(scene);
         stage.show();
     }
+
+    private VBox criarTabelaEstilizada(List<String> colunas, List<Integer> larguras) {
+        VBox tabela = new VBox(0);
+        tabela.getStyleClass().add("fixos-block");
+
+        // Cabeçalho
+        HBox header = new HBox();
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(6, 8, 6, 8));
+        header.getStyleClass().add("table-header");
+        for (int i = 0; i < colunas.size(); i++) {
+            header.getChildren().add(col(colunas.get(i), larguras.get(i)));
+        }
+        tabela.getChildren().add(header);
+        return tabela;
+    }
+
+    private HBox criarLinhaEstilizada(List<String> valores, List<Integer> larguras, String corPrimeira) {
+        HBox linha = new HBox();
+        linha.setAlignment(Pos.CENTER_LEFT);
+        linha.setPadding(new Insets(6, 8, 6, 8));
+        linha.getStyleClass().add("table-row");
+
+        for (int i = 0; i < valores.size(); i++) {
+            Label l = col(valores.get(i), larguras.get(i));
+            if (i == 0 && corPrimeira != null) l.setStyle("-fx-text-fill: " + corPrimeira + ";");
+            linha.getChildren().add(l);
+        }
+        return linha;
+    }
+
+    private Label col(String texto, int largura) {
+        Label l = new Label(texto != null ? texto : "");
+        l.setPrefWidth(largura);
+        l.getStyleClass().add("table-cell");
+        return l;
+    }
+
+
 }

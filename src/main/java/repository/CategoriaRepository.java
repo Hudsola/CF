@@ -51,9 +51,24 @@ public class CategoriaRepository {
             ResultSet rs = check.executeQuery();
             if (rs.next() && rs.getInt(1) > 0)
                 throw new RuntimeException("Não é possível excluir: existem despesas vinculadas a essa categoria.");
+            PreparedStatement checkFixo = conn.prepareStatement(
+                    "SELECT COUNT(*) FROM lancamentos_fixos WHERE tipo='DESPESA' AND categoria_id=?");
+            checkFixo.setInt(1, id);
+            ResultSet rsFixo = checkFixo.executeQuery();
+            if (rsFixo.next() && rsFixo.getInt(1) > 0)
+                throw new RuntimeException("Não é possível excluir: existem lançamentos fixos usando essa categoria.");
+            // Mapeamentos de importação apontam para a categoria; sem ela não servem mais.
+            conn.setAutoCommit(false);
+            PreparedStatement delMap = conn.prepareStatement("DELETE FROM mapeamentos_descricao WHERE categoria_id=?");
+            delMap.setInt(1, id);
+            delMap.executeUpdate();
             PreparedStatement del = conn.prepareStatement("DELETE FROM categorias WHERE id=?");
             del.setInt(1, id);
-            if (del.executeUpdate() == 0) throw new RuntimeException("Categoria não encontrada com ID " + id);
+            if (del.executeUpdate() == 0) {
+                conn.rollback();
+                throw new RuntimeException("Categoria não encontrada com ID " + id);
+            }
+            conn.commit();
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao excluir categoria: " + e.getMessage(), e);
         }

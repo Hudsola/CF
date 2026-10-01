@@ -1,6 +1,7 @@
 package db;
 
 import java.sql.*;
+import java.util.Properties;
 
 public class DatabaseManager {
 
@@ -11,7 +12,10 @@ public class DatabaseManager {
     public static void setUrl(String url) { customUrl = url; }
 
     public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(customUrl != null ? customUrl : URL);
+        // O SQLite só respeita os REFERENCES das tabelas com foreign_keys ligado em cada conexão.
+        Properties props = new Properties();
+        props.setProperty("foreign_keys", "true");
+        return DriverManager.getConnection(customUrl != null ? customUrl : URL, props);
     }
 
     public static void inicializar() {
