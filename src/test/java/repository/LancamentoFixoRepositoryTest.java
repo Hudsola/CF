@@ -23,7 +23,7 @@ class LancamentoFixoRepositoryTest {
     }
 
     private LancamentoFixo novoFixo(Tipo tipo, String desc) {
-        return new LancamentoFixo(tipo, desc, 0, 500.00, contaId, 5);
+        return new LancamentoFixo(tipo, desc, 0, new java.math.BigDecimal("500.00"), contaId, 5);
     }
 
     @Test
@@ -70,9 +70,9 @@ class LancamentoFixoRepositoryTest {
         repo.salvar(novoFixo(Tipo.RECEITA, "Salário Antigo"));
         LancamentoFixo lf = repo.listarTodos().get(0);
         repo.atualizar(new LancamentoFixo(lf.getId(), Tipo.RECEITA, "Salário Novo",
-            0, "", 600.00, contaId, "Nubank", 10, true));
+            0, "", new java.math.BigDecimal("600.00"), contaId, "Nubank", 10, true));
         assertEquals("Salário Novo", repo.listarTodos().get(0).getDescricao());
-        assertEquals(600.00, repo.listarTodos().get(0).getValor(), 0.01);
+        util.Assercoes.assertValor("600.00", repo.listarTodos().get(0).getValor());
     }
 
     @Test

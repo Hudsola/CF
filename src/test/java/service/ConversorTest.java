@@ -10,14 +10,14 @@ class ConversorTest {
 
     @Test
     void deveConverterValoresNoFormatoBrasileiroEAmericano() {
-        assertEquals(1500.00, Conversor.parseValor("1.500,00"), 0.001);
-        assertEquals(1500.00, Conversor.parseValor("1500,00"), 0.001);
-        assertEquals(1500.00, Conversor.parseValor("1500.00"), 0.001);
-        assertEquals(1500.00, Conversor.parseValor("1.500"), 0.001);
-        assertEquals(1500.00, Conversor.parseValor("R$ 1.500,00"), 0.001);
-        assertEquals(1234567.89, Conversor.parseValor("1,234,567.89"), 0.001);
-        assertEquals(-12.30, Conversor.parseValor("-12,30"), 0.001);
-        assertEquals(15.5, Conversor.parseValor("\"15.5\""), 0.001);
+        util.Assercoes.assertValor("1500.00", Conversor.parseValor("1.500,00"));
+        util.Assercoes.assertValor("1500.00", Conversor.parseValor("1500,00"));
+        util.Assercoes.assertValor("1500.00", Conversor.parseValor("1500.00"));
+        util.Assercoes.assertValor("1500.00", Conversor.parseValor("1.500"));
+        util.Assercoes.assertValor("1500.00", Conversor.parseValor("R$ 1.500,00"));
+        util.Assercoes.assertValor("1234567.89", Conversor.parseValor("1,234,567.89"));
+        util.Assercoes.assertValor("-12.30", Conversor.parseValor("-12,30"));
+        util.Assercoes.assertValor("15.5", Conversor.parseValor("\"15.5\""));
     }
 
     @Test
@@ -26,6 +26,7 @@ class ConversorTest {
         assertThrows(IllegalArgumentException.class, () -> Conversor.parseValor("abc"));
         assertThrows(IllegalArgumentException.class, () -> Conversor.parseValor("NaN"));
         assertThrows(IllegalArgumentException.class, () -> Conversor.parseValor("1e5"));
+        assertThrows(IllegalArgumentException.class, () -> Conversor.parseValor("10,005"));
         assertThrows(IllegalArgumentException.class, () -> Conversor.parseValorPositivo("0"));
         assertThrows(IllegalArgumentException.class, () -> Conversor.parseValorPositivo("-5,00"));
     }

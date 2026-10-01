@@ -2,36 +2,37 @@ package ui.home;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Label;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.ScrollPane;
+import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import model.LancamentoFixo;
-import model.Usuario;
+import model.*;
+import service.CalculadoraXp;
 import service.ControleFinanceiro;
+import ui.App;
 import ui.components.DonutChart;
+import ui.components.Ui;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.format.TextStyle;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 public class HomeView {
 
     private final ControleFinanceiro cf = new ControleFinanceiro();
+    private final String mesAtual = Meses.nome(LocalDate.now());
+    private final int anoAtual = LocalDate.now().getYear();
 
     public ScrollPane getView() {
+        TotaisPeriodo mes = cf.totais(anoAtual, mesAtual);
+
         VBox root = new VBox(16);
         root.setPadding(new Insets(20));
         root.getStyleClass().add("main-content");
-
         root.getChildren().addAll(
-                criarLinhaCards(),
+                criarLinhaCards(mes),
                 criarBlocoXP(),
                 criarLinhaGraficos(),
-                criarBlocoFixos()
-        );
+                criarBlocoFixos());
 
         ScrollPane scroll = new ScrollPane(root);
         scroll.setFitToWidth(true);
@@ -40,215 +41,179 @@ public class HomeView {
     }
 
     // -------------------------------------------------------------------------
-    // Linha de cards (perfil + 3 vazios)
+    // Cards: perfil + resumo do mês atual
     // -------------------------------------------------------------------------
 
-    private HBox criarLinhaCards() {
-        HBox linha = new HBox(12);
-        linha.setAlignment(Pos.CENTER_LEFT);
+    private HBox criarLinhaCards(TotaisPeriodo mes) {
+        String sufixo = " — " + mesAtual;
+        VBox cardReceitas = criarCard("RECEITAS" + sufixo, Dinheiro.formatar(mes.receitas()), Ui.COR_RECEITA, null);
+        VBox cardDespesas = criarCard("DESPESAS" + sufixo, Dinheiro.formatar(mes.despesas()), Ui.COR_DESPESA,
+                mes.receitas().signum() > 0 ? Dinheiro.formatarPercentual(mes.percentualGasto()) + " da renda" : null);
+        BigDecimal saldo = mes.saldo();
+        VBox cardSaldo = criarCard("SALDO" + sufixo, Dinheiro.formatar(saldo),
+                saldo.signum() >= 0 ? Ui.COR_RECEITA : Ui.COR_DESPESA,
+                "Investido: " + Dinheiro.formatar(mes.investimentos()));
 
-        linha.getChildren().addAll(
-            criarCardPerfil(),
-            criarCardVazio(),
-            criarCardVazio(),
-            criarCardVazio()
-        );
+        HBox linha = new HBox(12, criarCardPerfil(), cardReceitas, cardDespesas, cardSaldo);
+        for (var card : linha.getChildren()) HBox.setHgrow(card, Priority.ALWAYS);
+        linha.setAlignment(Pos.CENTER_LEFT);
         return linha;
     }
 
     private VBox criarCardPerfil() {
         Usuario usuario = cf.getUsuario();
-        double saldo    = cf.saldoTotal();
-
-        VBox card = new VBox(8);
-        card.getStyleClass().addAll("profile-card", "card-highlight");
-        card.setPrefWidth(220);
-        card.setPadding(new Insets(14));
+        BigDecimal saldo = cf.saldoTotal();
 
         Label lblNome = new Label(usuario.getNome().toUpperCase());
         lblNome.getStyleClass().add("card-name");
 
-        Label lblIdadeLabel = new Label("IDADE");
-        lblIdadeLabel.getStyleClass().add("card-stat-label");
+        Button btnEditar = new Button("✎");
+        btnEditar.getStyleClass().add("btn-secondary");
+        btnEditar.setTooltip(new Tooltip("Editar nome e data de nascimento"));
+        btnEditar.setOnAction(e -> { if (PerfilDialog.editar(cf)) App.navegarPara("home"); });
+        Region espaco = new Region();
+        HBox.setHgrow(espaco, Priority.ALWAYS);
+        HBox topo = new HBox(6, lblNome, espaco, btnEditar);
+        topo.setAlignment(Pos.CENTER_LEFT);
 
-        Label lblIdade = new Label(usuario.getIdade() > 0 ? String.valueOf(usuario.getIdade()) : "—");
-        lblIdade.getStyleClass().add("card-stat-value");
+        Label lblIdade = new Label(usuario.getIdade() > 0 ? usuario.getIdade() + " anos" : "Idade não informada");
+        lblIdade.getStyleClass().add("card-stat-label");
 
-        Label lblSaldoLabel = new Label("SALDO");
+        Label lblSaldoLabel = new Label("SALDO GERAL");
         lblSaldoLabel.getStyleClass().add("card-stat-label");
-
-        Label lblSaldo = new Label(String.format("R$ %,.2f", saldo));
+        Label lblSaldo = new Label(Dinheiro.formatar(saldo));
         lblSaldo.getStyleClass().add("card-stat-value");
-        lblSaldo.setStyle(saldo >= 0
-            ? "-fx-text-fill: #4AE87A;"
-            : "-fx-text-fill: #E85C4A;");
+        lblSaldo.setStyle("-fx-text-fill: " + (saldo.signum() >= 0 ? Ui.COR_RECEITA : Ui.COR_DESPESA) + ";");
 
-        card.getChildren().addAll(lblNome, lblIdadeLabel, lblIdade, lblSaldoLabel, lblSaldo);
+        VBox card = new VBox(8, topo, lblIdade, lblSaldoLabel, lblSaldo);
+        card.getStyleClass().addAll("profile-card", "card-highlight");
+        card.setPrefWidth(240);
+        card.setPadding(new Insets(14));
         return card;
     }
 
-    private VBox criarCardVazio() {
-        VBox card = new VBox();
+    private VBox criarCard(String titulo, String valor, String cor, String detalhe) {
+        Label lblTitulo = new Label(titulo);
+        lblTitulo.getStyleClass().add("card-stat-label");
+        Label lblValor = new Label(valor);
+        lblValor.getStyleClass().add("card-stat-value");
+        lblValor.setStyle("-fx-text-fill: " + cor + ";");
+
+        VBox card = new VBox(8, lblTitulo, lblValor);
+        if (detalhe != null) {
+            Label lblDetalhe = new Label(detalhe);
+            lblDetalhe.getStyleClass().add("card-stat-label");
+            card.getChildren().add(lblDetalhe);
+        }
         card.getStyleClass().add("profile-card");
         card.setPrefWidth(220);
         card.setPadding(new Insets(14));
-        Label placeholder = new Label("—");
-        placeholder.getStyleClass().add("card-stat-label");
-        card.getChildren().add(placeholder);
         return card;
     }
 
     // -------------------------------------------------------------------------
-    // Bloco de XP / Nível
+    // Nível / XP
     // -------------------------------------------------------------------------
 
     private HBox criarBlocoXP() {
-        Usuario usuario = cf.getUsuario();
+        Progresso p = cf.getProgresso();
 
-        HBox bloco = new HBox(24);
-        bloco.getStyleClass().add("xp-block");
-        bloco.setPadding(new Insets(18, 24, 18, 24));
-        bloco.setAlignment(Pos.CENTER_LEFT);
-
-        // Nível em círculo
         StackPane circulo = new StackPane();
         circulo.getStyleClass().add("level-circle");
         circulo.setPrefSize(70, 70);
-        Label lblNivel = new Label(String.valueOf(usuario.getNivel()));
+        circulo.setMinSize(70, 70);
+        circulo.setMaxSize(70, 70);   // sem isso o HBox estica a altura e o círculo vira oval
+        Label lblNivel = new Label(String.valueOf(p.nivel()));
         lblNivel.getStyleClass().add("level-number");
         circulo.getChildren().add(lblNivel);
 
-        // XP info
-        VBox xpInfo = new VBox(6);
-        Label lblXpTitulo = new Label("XP TOTAL");
+        Label lblXpTitulo = new Label("NÍVEL " + p.nivel() + "  •  XP TOTAL");
         lblXpTitulo.getStyleClass().add("xp-label");
-
-        Label lblXp = new Label(usuario.getXp() + " XP");
+        Label lblXp = new Label(p.xpTotal() + " XP");
         lblXp.getStyleClass().add("xp-value");
 
-        ProgressBar progressBar = new ProgressBar(usuario.getProgressoXp());
-        progressBar.getStyleClass().add("xp-progress");
-        progressBar.setPrefWidth(300);
+        ProgressBar barra = new ProgressBar(p.fracaoNivel());
+        barra.getStyleClass().add("xp-progress");
+        barra.setPrefWidth(300);
 
-        Label lblXpDetalhe = new Label(usuario.getXp() + " / " + usuario.getXpProximoNivel() + " para o próximo nível");
-        lblXpDetalhe.getStyleClass().add("xp-detalhe");
+        Label lblDetalhe = new Label(p.xpNoNivel() + " / " + p.xpParaProximo() + " XP para o nível " + (p.nivel() + 1));
+        lblDetalhe.getStyleClass().add("xp-detalhe");
 
-        xpInfo.getChildren().addAll(lblXpTitulo, lblXp, progressBar, lblXpDetalhe);
+        Label lblRegras = new Label(String.format(
+                "Como ganhar XP: +%d por lançamento registrado • +%d por mês encerrado com saldo positivo • +%d por mês com investimento",
+                CalculadoraXp.XP_POR_LANCAMENTO, CalculadoraXp.XP_MES_POSITIVO, CalculadoraXp.XP_MES_COM_INVESTIMENTO));
+        lblRegras.getStyleClass().add("xp-detalhe");
+        lblRegras.setWrapText(true);
 
-        bloco.getChildren().addAll(circulo, xpInfo);
+        VBox xpInfo = new VBox(6, lblXpTitulo, lblXp, barra, lblDetalhe, lblRegras);
+        HBox bloco = new HBox(24, circulo, xpInfo);
+        bloco.getStyleClass().add("xp-block");
+        bloco.setPadding(new Insets(18, 24, 18, 24));
+        bloco.setAlignment(Pos.CENTER_LEFT);
         return bloco;
     }
 
     // -------------------------------------------------------------------------
-    // Linha de gráficos donut
+    // Gráficos do mês atual
     // -------------------------------------------------------------------------
 
     private HBox criarLinhaGraficos() {
-        HBox linha = new HBox(16);
-
-        String mesAtual = LocalDate.now().getMonth()
-            .getDisplayName(TextStyle.FULL, new Locale("pt", "BR")).toUpperCase();
-        int anoAtual = LocalDate.now().getYear();
-
-        // Donut receitas
-        Map<String, Double> receitas = cf.divisaoReceitasPorOrigem(anoAtual, mesAtual);
-        double totalReceitas = receitas.values().stream().mapToDouble(Double::doubleValue).sum();
-        String labelReceitas = totalReceitas > 0
-            ? String.format("R$ %,.0f", totalReceitas)
-            : "R$ 0";
-        DonutChart donutReceitas = new DonutChart("Receitas — " + mesAtual, receitas, labelReceitas);
-        donutReceitas.getStyleClass().add("chart-block");
-
-        // Donut despesas
-        Map<String, Double> despesas = cf.divisaoGastosPorCategoria(anoAtual, mesAtual);
-        double totalDespesas = despesas.values().stream().mapToDouble(Double::doubleValue).sum();
-        String labelDespesas = totalDespesas > 0
-            ? String.format("R$ %,.0f", totalDespesas)
-            : "R$ 0";
-        DonutChart donutDespesas = new DonutChart("Despesas — " + mesAtual, despesas, labelDespesas);
-        donutDespesas.getStyleClass().add("chart-block");
-
-        HBox.setHgrow(donutReceitas, Priority.ALWAYS);
-        HBox.setHgrow(donutDespesas, Priority.ALWAYS);
-        donutReceitas.setMaxWidth(Double.MAX_VALUE);
-        donutDespesas.setMaxWidth(Double.MAX_VALUE);
-
-        linha.getChildren().addAll(donutReceitas, donutDespesas);
+        DonutChart receitas = donut("Receitas — " + mesAtual, cf.divisaoReceitasPorOrigem(anoAtual, mesAtual));
+        DonutChart despesas = donut("Despesas — " + mesAtual, cf.divisaoGastosPorCategoria(anoAtual, mesAtual));
+        HBox linha = new HBox(16, receitas, despesas);
+        for (var d : List.of(receitas, despesas)) {
+            HBox.setHgrow(d, Priority.ALWAYS);
+            d.setMaxWidth(Double.MAX_VALUE);
+        }
         return linha;
     }
 
+    private DonutChart donut(String titulo, Map<String, BigDecimal> dados) {
+        BigDecimal total = dados.values().stream().reduce(Dinheiro.ZERO, BigDecimal::add);
+        DonutChart d = new DonutChart(titulo, dados, Dinheiro.formatar(total));
+        d.getStyleClass().add("chart-block");
+        return d;
+    }
+
     // -------------------------------------------------------------------------
-    // Bloco lançamentos fixos ativos
+    // Lançamentos fixos ativos
     // -------------------------------------------------------------------------
 
     private VBox criarBlocoFixos() {
-        VBox bloco = new VBox(10);
-        bloco.getStyleClass().add("fixos-block");
-        bloco.setPadding(new Insets(16));
-
         Label titulo = new Label("Lançamentos Fixos Ativos");
         titulo.getStyleClass().add("section-title");
 
+        TableView<LancamentoFixo> tabela = Ui.tabela("Nenhum lançamento fixo ativo.");
+        tabela.getColumns().add(tipoColorido());
+        tabela.getColumns().add(Ui.colunaTexto("Descrição", LancamentoFixo::getDescricao, 200));
+        tabela.getColumns().add(Ui.colunaTexto("Categoria", LancamentoFixo::getCategoriaNome, 130));
+        tabela.getColumns().add(Ui.colunaValor("Valor", LancamentoFixo::getValor, 120, null));
+        tabela.getColumns().add(Ui.colunaTexto("Conta", LancamentoFixo::getContaNome, 120));
+        tabela.getColumns().add(Ui.colunaTexto("Dia", lf -> "Dia " + lf.getDiaVencimento(), 80));
         List<LancamentoFixo> fixos = cf.getLancamentosFixosAtivos();
+        tabela.getItems().setAll(fixos);
+        tabela.setPrefHeight(Math.max(90, 34 + fixos.size() * 28));
 
-        if (fixos.isEmpty()) {
-            Label vazio = new Label("Nenhum lançamento fixo ativo.");
-            vazio.getStyleClass().add("empty-label");
-            bloco.getChildren().addAll(titulo, vazio);
-            return bloco;
-        }
-
-        // Cabeçalho
-        HBox header = criarLinhaFixo("TIPO", "DESCRIÇÃO", "CATEGORIA", "VALOR", "CONTA", "DIA", true);
-        bloco.getChildren().addAll(titulo, header);
-
-        for (LancamentoFixo lf : fixos) {
-            HBox linha = criarLinhaFixo(
-                lf.getTipo().name(),
-                lf.getDescricao(),
-                lf.getCategoriaNome(),
-                String.format("R$ %,.2f", lf.getValor()),
-                lf.getContaNome(),
-                "Dia " + lf.getDiaVencimento(),
-                false
-            );
-            bloco.getChildren().add(linha);
-        }
-
+        VBox bloco = new VBox(10, titulo, tabela);
+        bloco.getStyleClass().add("fixos-block");
+        bloco.setPadding(new Insets(16));
         return bloco;
     }
 
-    private HBox criarLinhaFixo(String tipo, String desc, String cat,
-                                 String valor, String conta, String dia, boolean header) {
-        HBox linha = new HBox();
-        linha.setAlignment(Pos.CENTER_LEFT);
-        linha.setPadding(new Insets(6, 8, 6, 8));
-        if (header) linha.getStyleClass().add("table-header");
-        else        linha.getStyleClass().add("table-row");
-
-        Label lTipo  = col(tipo,  100);
-        Label lDesc  = col(desc,  200);
-        Label lCat   = col(cat,   130);
-        Label lValor = col(valor, 120);
-        Label lConta = col(conta, 120);
-        Label lDia   = col(dia,    80);
-
-        if (!header) {
-            switch (tipo) {
-                case "RECEITA"      -> lTipo.setStyle("-fx-text-fill: #4AE87A;");
-                case "DESPESA"      -> lTipo.setStyle("-fx-text-fill: #E85C4A;");
-                case "INVESTIMENTO" -> lTipo.setStyle("-fx-text-fill: #4A9EE8;");
+    private TableColumn<LancamentoFixo, String> tipoColorido() {
+        TableColumn<LancamentoFixo, String> col = Ui.colunaTexto("Tipo", lf -> lf.getTipo().name(), 110);
+        col.setCellFactory(c -> new TableCell<>() {
+            @Override protected void updateItem(String tipo, boolean vazio) {
+                super.updateItem(tipo, vazio);
+                setText(vazio ? null : tipo);
+                String cor = vazio || tipo == null ? null : switch (tipo) {
+                    case "RECEITA" -> Ui.COR_RECEITA;
+                    case "DESPESA" -> Ui.COR_DESPESA;
+                    default -> Ui.COR_INVESTIMENTO;
+                };
+                setStyle(cor == null ? "" : "-fx-text-fill: " + cor + ";");
             }
-        }
-
-        linha.getChildren().addAll(lTipo, lDesc, lCat, lValor, lConta, lDia);
-        return linha;
-    }
-
-    private Label col(String texto, double largura) {
-        Label l = new Label(texto);
-        l.setPrefWidth(largura);
-        l.getStyleClass().add("table-cell");
-        return l;
+        });
+        return col;
     }
 }

@@ -1,48 +1,43 @@
 package model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class Despesa {
     private int id;
-    private int categoriaId;
+    private final int categoriaId;
     private String categoriaNome;
-    private String detalhamento;
-    private double valor;
-    private int contaId;
+    private final String detalhamento;
+    private final BigDecimal valor;
+    private final int contaId;
     private String contaNome;
-    private LocalDate data;
-    private String mes;
-    private int ano;
+    private final LocalDate data;
 
-    public Despesa(int categoriaId, String detalhamento, double valor,
-                   int contaId, LocalDate data, String mes, int ano) {
+    public Despesa(int categoriaId, String detalhamento, BigDecimal valor, int contaId, LocalDate data) {
         this.categoriaId = categoriaId; this.detalhamento = detalhamento;
-        this.valor = valor; this.contaId = contaId;
-        this.data = data; this.mes = mes; this.ano = ano;
+        this.valor = Dinheiro.arredondar(valor); this.contaId = contaId; this.data = data;
     }
 
     public Despesa(int id, int categoriaId, String categoriaNome, String detalhamento,
-                   double valor, int contaId, String contaNome,
-                   LocalDate data, String mes, int ano) {
-        this(categoriaId, detalhamento, valor, contaId, data, mes, ano);
+                   BigDecimal valor, int contaId, String contaNome, LocalDate data) {
+        this(categoriaId, detalhamento, valor, contaId, data);
         this.id = id; this.categoriaNome = categoriaNome; this.contaNome = contaNome;
     }
 
     public int getId()               { return id; }
     public int getCategoriaId()      { return categoriaId; }
     public String getCategoriaNome() { return categoriaNome != null ? categoriaNome : String.valueOf(categoriaId); }
-    public String getTipoGasto()     { return getCategoriaNome(); }
     public String getDetalhamento()  { return detalhamento; }
-    public double getValor()         { return valor; }
+    public BigDecimal getValor()     { return valor; }
     public int getContaId()          { return contaId; }
     public String getContaNome()     { return contaNome != null ? contaNome : String.valueOf(contaId); }
     public LocalDate getData()       { return data; }
-    public String getMes()           { return mes; }
-    public int getAno()              { return ano; }
+    public String getMes()           { return Meses.nome(data); }
+    public int getAno()              { return data.getYear(); }
 
     @Override
     public String toString() {
-        return String.format("[%d] %-15s | %-22s | R$ %9.2f | Conta: %-12s | %s (%s/%d)",
-                id, getCategoriaNome(), detalhamento, valor, getContaNome(), data, mes, ano);
+        return String.format("[%d] %s | %s | %s | %s | %s",
+                id, getCategoriaNome(), detalhamento, Dinheiro.formatar(valor), getContaNome(), data);
     }
 }

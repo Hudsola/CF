@@ -1,40 +1,37 @@
 package model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class Investimento {
     private int id;
-    private String tipo;
-    private double valor;
-    private int contaId;
+    private final String tipo;
+    private final BigDecimal valor;
+    private final int contaId;
     private String contaNome;
-    private LocalDate data;
-    private String mes;
-    private int ano;
+    private final LocalDate data;
 
-    public Investimento(String tipo, double valor, int contaId, LocalDate data, String mes, int ano) {
-        this.tipo = tipo; this.valor = valor; this.contaId = contaId;
-        this.data = data; this.mes = mes; this.ano = ano;
+    public Investimento(String tipo, BigDecimal valor, int contaId, LocalDate data) {
+        this.tipo = tipo; this.valor = Dinheiro.arredondar(valor);
+        this.contaId = contaId; this.data = data;
     }
 
-    public Investimento(int id, String tipo, double valor, int contaId, String contaNome,
-                        LocalDate data, String mes, int ano) {
-        this(tipo, valor, contaId, data, mes, ano);
+    public Investimento(int id, String tipo, BigDecimal valor, int contaId, String contaNome, LocalDate data) {
+        this(tipo, valor, contaId, data);
         this.id = id; this.contaNome = contaNome;
     }
 
     public int getId()           { return id; }
     public String getTipo()      { return tipo; }
-    public double getValor()     { return valor; }
+    public BigDecimal getValor() { return valor; }
     public int getContaId()      { return contaId; }
     public String getContaNome() { return contaNome != null ? contaNome : String.valueOf(contaId); }
     public LocalDate getData()   { return data; }
-    public String getMes()       { return mes; }
-    public int getAno()          { return ano; }
+    public String getMes()       { return Meses.nome(data); }
+    public int getAno()          { return data.getYear(); }
 
     @Override
     public String toString() {
-        return String.format("[%d] %-22s | R$ %9.2f | Conta: %-12s | %s (%s/%d)",
-                id, tipo, valor, getContaNome(), data, mes, ano);
+        return String.format("[%d] %s | %s | %s | %s", id, tipo, Dinheiro.formatar(valor), getContaNome(), data);
     }
 }

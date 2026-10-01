@@ -1,40 +1,40 @@
 package model;
 
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/** Totais de um mês para a tabela "Resumo Mês a Mês". */
 public class ResumoMensal {
-    private String mes;
-    private double receita, investimentos, despesaTotal;
-    private double alimentacao, moradia, educacao, pet, saude, transporte, pessoais, lazer, financeiros;
-    private double saldo, saldoAcumulado;
+    private final String mes;
+    private BigDecimal receita = Dinheiro.ZERO;
+    private BigDecimal investimentos = Dinheiro.ZERO;
+    private BigDecimal despesaTotal = Dinheiro.ZERO;
+    private BigDecimal saldo = Dinheiro.ZERO;
+    private BigDecimal saldoAcumulado = Dinheiro.ZERO;
+    /** Despesas do mês por nome de categoria (todas as categorias, inclusive as criadas pelo usuário). */
+    private final Map<String, BigDecimal> despesasPorCategoria = new LinkedHashMap<>();
 
     public ResumoMensal(String mes) { this.mes = mes; }
 
-    public String getMes()                  { return mes; }
-    public double getReceita()              { return receita; }
-    public void setReceita(double v)        { receita = v; }
-    public double getInvestimentos()        { return investimentos; }
-    public void setInvestimentos(double v)  { investimentos = v; }
-    public double getDespesaTotal()         { return despesaTotal; }
-    public void setDespesaTotal(double v)   { despesaTotal = v; }
-    public double getAlimentacao()          { return alimentacao; }
-    public void setAlimentacao(double v)    { alimentacao = v; }
-    public double getMoradia()              { return moradia; }
-    public void setMoradia(double v)        { moradia = v; }
-    public double getEducacao()             { return educacao; }
-    public void setEducacao(double v)       { educacao = v; }
-    public double getPet()                  { return pet; }
-    public void setPet(double v)            { pet = v; }
-    public double getSaude()                { return saude; }
-    public void setSaude(double v)          { saude = v; }
-    public double getTransporte()           { return transporte; }
-    public void setTransporte(double v)     { transporte = v; }
-    public double getPessoais()             { return pessoais; }
-    public void setPessoais(double v)       { pessoais = v; }
-    public double getLazer()                { return lazer; }
-    public void setLazer(double v)          { lazer = v; }
-    public double getFinanceiros()          { return financeiros; }
-    public void setFinanceiros(double v)    { financeiros = v; }
-    public double getSaldo()                { return saldo; }
-    public void setSaldo(double v)          { saldo = v; }
-    public double getSaldoAcumulado()       { return saldoAcumulado; }
-    public void setSaldoAcumulado(double v) { saldoAcumulado = v; }
+    public String getMes()                      { return mes; }
+    public BigDecimal getReceita()              { return receita; }
+    public void setReceita(BigDecimal v)        { receita = v; }
+    public BigDecimal getInvestimentos()        { return investimentos; }
+    public void setInvestimentos(BigDecimal v)  { investimentos = v; }
+    public BigDecimal getDespesaTotal()         { return despesaTotal; }
+    public void setDespesaTotal(BigDecimal v)   { despesaTotal = v; }
+    public BigDecimal getSaldo()                { return saldo; }
+    public void setSaldo(BigDecimal v)          { saldo = v; }
+    public BigDecimal getSaldoAcumulado()       { return saldoAcumulado; }
+    public void setSaldoAcumulado(BigDecimal v) { saldoAcumulado = v; }
+    public Map<String, BigDecimal> getDespesasPorCategoria() { return despesasPorCategoria; }
+
+    public BigDecimal getDespesaCategoria(String categoria) {
+        return despesasPorCategoria.getOrDefault(categoria, Dinheiro.ZERO);
+    }
+
+    public boolean temMovimento() {
+        return receita.signum() != 0 || investimentos.signum() != 0 || despesaTotal.signum() != 0;
+    }
 }

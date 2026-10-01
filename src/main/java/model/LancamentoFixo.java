@@ -1,29 +1,31 @@
 package model;
 
+import java.math.BigDecimal;
+
 public class LancamentoFixo {
 
     public enum Tipo { RECEITA, DESPESA, INVESTIMENTO }
 
     private int id;
-    private Tipo tipo;
-    private String descricao;
-    private int categoriaId;
+    private final Tipo tipo;
+    private final String descricao;
+    private final int categoriaId;
     private String categoriaNome;
-    private double valor;
-    private int contaId;
+    private final BigDecimal valor;
+    private final int contaId;
     private String contaNome;
-    private int diaVencimento;
+    private final int diaVencimento;
     private boolean ativo;
 
     public LancamentoFixo(Tipo tipo, String descricao, int categoriaId,
-                          double valor, int contaId, int diaVencimento) {
+                          BigDecimal valor, int contaId, int diaVencimento) {
         this.tipo = tipo; this.descricao = descricao; this.categoriaId = categoriaId;
-        this.valor = valor; this.contaId = contaId; this.diaVencimento = diaVencimento;
+        this.valor = Dinheiro.arredondar(valor); this.contaId = contaId; this.diaVencimento = diaVencimento;
         this.ativo = true;
     }
 
     public LancamentoFixo(int id, Tipo tipo, String descricao, int categoriaId, String categoriaNome,
-                          double valor, int contaId, String contaNome, int diaVencimento, boolean ativo) {
+                          BigDecimal valor, int contaId, String contaNome, int diaVencimento, boolean ativo) {
         this(tipo, descricao, categoriaId, valor, contaId, diaVencimento);
         this.id = id; this.categoriaNome = categoriaNome;
         this.contaNome = contaNome; this.ativo = ativo;
@@ -34,7 +36,7 @@ public class LancamentoFixo {
     public String getDescricao()     { return descricao; }
     public int getCategoriaId()      { return categoriaId; }
     public String getCategoriaNome() { return categoriaNome != null ? categoriaNome : ""; }
-    public double getValor()         { return valor; }
+    public BigDecimal getValor()     { return valor; }
     public int getContaId()          { return contaId; }
     public String getContaNome()     { return contaNome != null ? contaNome : String.valueOf(contaId); }
     public int getDiaVencimento()    { return diaVencimento; }
@@ -42,9 +44,7 @@ public class LancamentoFixo {
 
     @Override
     public String toString() {
-        String cat = tipo == Tipo.DESPESA ? " | Cat: " + getCategoriaNome() : "";
-        String sit = ativo ? "✔ ativo" : "✖ inativo";
-        return String.format("[%d] %-12s | %-22s%s | R$ %9.2f | Conta: %-10s | Dia %2d | %s",
-                id, tipo, descricao, cat, valor, getContaNome(), diaVencimento, sit);
+        return String.format("[%d] %s | %s | %s | dia %d | %s",
+                id, tipo, descricao, Dinheiro.formatar(valor), diaVencimento, ativo ? "ativo" : "inativo");
     }
 }

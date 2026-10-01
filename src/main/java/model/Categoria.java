@@ -10,5 +10,11 @@ public class Categoria {
     public int getId()      { return id; }
     public String getNome() { return nome; }
 
-    @Override public String toString() { return String.format("[%d] %s", id, nome); }
+    @Override public String toString() { return nome; }
+
+    @Override public boolean equals(Object o) {
+        return this == o || (o instanceof Categoria outro && id != 0 && outro.id == id);
+    }
+
+    @Override public int hashCode() { return Integer.hashCode(id); }
 }

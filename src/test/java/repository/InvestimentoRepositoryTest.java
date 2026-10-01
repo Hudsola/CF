@@ -2,14 +2,17 @@ package repository;
 
 import model.Conta;
 import model.Investimento;
-import org.junit.jupiter.api.*;
+import model.Periodo;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import util.DatabaseTestHelper;
 
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static util.Assercoes.assertValor;
+import static util.Assercoes.v;
 
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class InvestimentoRepositoryTest {
 
     private final InvestimentoRepository repo      = new InvestimentoRepository();
@@ -23,44 +26,39 @@ class InvestimentoRepositoryTest {
         contaId = contaRepo.listarTodos().get(0).getId();
     }
 
-    private Investimento novo(String tipo, double valor) {
-        return new Investimento(tipo, valor, contaId, LocalDate.of(2025, 6, 1), "JUNHO", 2025);
+    private Investimento novo(String tipo, String valor) {
+        return new Investimento(tipo, v(valor), contaId, LocalDate.of(2025, 6, 1));
     }
 
     @Test
-    @Order(1)
     void deveSalvarEListar() {
-        repo.salvar(novo("Tesouro Direto", 500.00));
+        repo.salvar(novo("Tesouro Direto", "500.00"));
         assertEquals(1, repo.listarTodos().size());
         assertEquals("Tesouro Direto", repo.listarTodos().get(0).getTipo());
     }
 
     @Test
-    @Order(2)
-    void deveListarPorAno() {
-        repo.salvar(novo("Tesouro Direto", 500.00));
-        repo.salvar(new Investimento("CDB", 300.00, contaId, LocalDate.of(2024, 1, 1), "JANEIRO", 2024));
-        assertEquals(1, repo.listarPorAno(2025).size());
-        assertEquals(1, repo.listarPorAno(2024).size());
+    void deveListarPorPeriodo() {
+        repo.salvar(novo("Tesouro Direto", "500.00"));
+        repo.salvar(new Investimento("CDB", v("300.00"), contaId, LocalDate.of(2024, 1, 1)));
+        assertEquals(1, repo.listarPorPeriodo(Periodo.doAno(2025)).size());
+        assertEquals(1, repo.listarPorPeriodo(Periodo.doAno(2024)).size());
     }
 
     @Test
-    @Order(3)
     void deveAtualizar() {
-        repo.salvar(novo("Ações", 1000.00));
+        repo.salvar(novo("Ações", "1000.00"));
         Investimento i = repo.listarTodos().get(0);
-        repo.atualizar(new Investimento(i.getId(), "Ações PETR4", 1100.00, contaId, "XP",
-            LocalDate.of(2025, 6, 1), "JUNHO", 2025));
+        repo.atualizar(new Investimento(i.getId(), "Ações PETR4", v("1100.00"), contaId, "XP",
+            LocalDate.of(2025, 6, 1)));
         assertEquals("Ações PETR4", repo.listarTodos().get(0).getTipo());
-        assertEquals(1100.00, repo.listarTodos().get(0).getValor(), 0.01);
+        assertValor("1100.00", repo.listarTodos().get(0).getValor());
     }
 
     @Test
-    @Order(4)
     void deveExcluir() {
-        repo.salvar(novo("Poupança", 200.00));
-        Investimento i = repo.listarTodos().get(0);
-        repo.excluir(i.getId());
+        repo.salvar(novo("Poupança", "200.00"));
+        repo.excluir(repo.listarTodos().get(0).getId());
         assertTrue(repo.listarTodos().isEmpty());
     }
 }

@@ -1,26 +1,27 @@
 package repository;
 
 import db.DatabaseManager;
+import model.Dinheiro;
 import model.Investimento;
+import model.Periodo;
 
 import java.sql.*;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class InvestimentoRepository {
 
     private static final String SELECT_BASE =
-        "SELECT i.id, i.tipo, i.valor, i.conta_id, c.nome AS conta_nome, i.data, i.mes, i.ano " +
+        "SELECT i.id, i.tipo, i.valor, i.conta_id, c.nome AS conta_nome, i.data " +
         "FROM investimentos i JOIN contas c ON c.id = i.conta_id ";
 
     public void salvar(Investimento i) {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                 "INSERT INTO investimentos (tipo, valor, conta_id, data, mes, ano) VALUES (?,?,?,?,?,?)")) {
-            ps.setString(1, i.getTipo()); ps.setDouble(2, i.getValor());
+                 "INSERT INTO investimentos (tipo, valor, conta_id, data) VALUES (?,?,?,?)")) {
+            ps.setString(1, i.getTipo()); ps.setDouble(2, i.getValor().doubleValue());
             ps.setInt(3, i.getContaId()); ps.setString(4, i.getData().toString());
-            ps.setString(5, i.getMes()); ps.setInt(6, i.getAno());
             ps.executeUpdate();
         } catch (SQLException e) { throw new RuntimeException("Erro ao salvar investimento: " + e.getMessage(), e); }
     }
@@ -28,18 +29,11 @@ public class InvestimentoRepository {
     public void atualizar(Investimento i) {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                 "UPDATE investimentos SET tipo=?, valor=?, conta_id=?, data=?, mes=?, ano=? WHERE id=?")) {
-            ps.setString(1, i.getTipo()); ps.setDouble(2, i.getValor());
-            ps.setInt(3, i.getContaId()); ps.setString(4, i.getData().toString());
-            ps.setString(5, i.getMes()); ps.setInt(6, i.getAno()); ps.setInt(7, i.getId());
+                 "UPDATE investimentos SET tipo=?, valor=?, conta_id=?, data=? WHERE id=?")) {
+            ps.setString(1, i.getTipo()); ps.setDouble(2, i.getValor().doubleValue());
+            ps.setInt(3, i.getContaId()); ps.setString(4, i.getData().toString()); ps.setInt(5, i.getId());
             if (ps.executeUpdate() == 0) throw new RuntimeException("Investimento não encontrado com ID " + i.getId());
         } catch (SQLException e) { throw new RuntimeException("Erro ao atualizar investimento: " + e.getMessage(), e); }
-    }
-
-    public List<Investimento> listarTodos() { return query(SELECT_BASE + "ORDER BY i.data", null); }
-
-    public List<Investimento> listarPorAno(int ano) {
-        return query(SELECT_BASE + "WHERE i.ano=? ORDER BY i.data", ano);
     }
 
     public void excluir(int id) {
@@ -50,89 +44,21 @@ public class InvestimentoRepository {
         } catch (SQLException e) { throw new RuntimeException("Erro ao excluir investimento: " + e.getMessage(), e); }
     }
 
-    private List<Investimento> query(String sql, Integer ano) {
-        List<Investimento> lista = new ArrayList<>();
-        try (Connection conn = DatabaseManager.getConnection()) {
-            ResultSet rs;
-            if (ano != null) {
-                PreparedStatement ps = conn.prepareStatement(sql);
-                ps.setInt(1, ano); rs = ps.executeQuery();
-            } else { rs = conn.createStatement().executeQuery(sql); }
-            while (rs.next()) lista.add(map(rs));
-        } catch (SQLException e) { throw new RuntimeException("Erro ao listar investimentos: " + e.getMessage(), e); }
-        return lista;
+    public List<Investimento> listarTodos() {
+        return Consultas.listar(SELECT_BASE + "ORDER BY i.data DESC, i.id DESC", List.of(), this::map, "investimentos");
     }
 
-    public List<Investimento> listarPorMesAno(String mes, int ano) {
-        List<Investimento> lista = new ArrayList<>();
-        String sql = SELECT_BASE + "WHERE i.mes=? AND i.ano=? ORDER BY i.data";
+    public List<Investimento> listarPorPeriodo(Periodo p) {
+        return Consultas.listar(SELECT_BASE + "WHERE i.data BETWEEN ? AND ? ORDER BY i.data, i.id",
+                List.of(p.inicio().toString(), p.fim().toString()), this::map, "investimentos");
+    }
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, mes);
-            ps.setInt(2, ano);
-
-            ResultSet rs = ps.executeQuery();
-
-            while (rs.next()) {
-                lista.add(map(rs));
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao listar investimentos: " + e.getMessage(), e);
-        }
-
-        return lista;
+    public Set<Integer> anos() {
+        return Consultas.anos("investimentos");
     }
 
     private Investimento map(ResultSet rs) throws SQLException {
-        return new Investimento(rs.getInt("id"), rs.getString("tipo"), rs.getDouble("valor"),
-            rs.getInt("conta_id"), rs.getString("conta_nome"),
-            LocalDate.parse(rs.getString("data")), rs.getString("mes"), rs.getInt("ano"));
-    }
-
-    public List<Investimento> pesquisar(String tipo, String mes, Integer ano) {
-
-        StringBuilder sql = new StringBuilder(SELECT_BASE + "WHERE 1=1 ");
-        List<Object> parametros = new ArrayList<>();
-
-        if (tipo != null && !tipo.equalsIgnoreCase("Todos")) {
-            sql.append("AND i.tipo = ? ");
-            parametros.add(tipo);
-        }
-
-        if (mes != null && !mes.equalsIgnoreCase("Todos")) {
-            sql.append("AND i.mes = ? ");
-            parametros.add(mes);
-        }
-
-        if (ano != null) {
-            sql.append("AND i.ano = ? ");
-            parametros.add(ano);
-        }
-
-        sql.append("ORDER BY i.data DESC");
-
-        List<Investimento> lista = new ArrayList<>();
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
-
-            for (int i = 0; i < parametros.size(); i++) {
-                ps.setObject(i + 1, parametros.get(i));
-            }
-
-            ResultSet rs = ps.executeQuery();
-
-            while (rs.next()) {
-                lista.add(map(rs));
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao pesquisar investimentos.", e);
-        }
-
-        return lista;
+        return new Investimento(rs.getInt("id"), rs.getString("tipo"), Dinheiro.de(rs.getDouble("valor")),
+            rs.getInt("conta_id"), rs.getString("conta_nome"), LocalDate.parse(rs.getString("data")));
     }
 }

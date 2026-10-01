@@ -22,7 +22,7 @@ public class LancamentoFixoRepository {
              PreparedStatement ps = conn.prepareStatement(
                  "INSERT INTO lancamentos_fixos (tipo, descricao, categoria_id, valor, conta_id, dia_vencimento, ativo) VALUES (?,?,?,?,?,?,1)")) {
             ps.setString(1, lf.getTipo().name()); ps.setString(2, lf.getDescricao());
-            ps.setInt(3, lf.getCategoriaId()); ps.setDouble(4, lf.getValor());
+            ps.setInt(3, lf.getCategoriaId()); ps.setDouble(4, lf.getValor().doubleValue());
             ps.setInt(5, lf.getContaId()); ps.setInt(6, lf.getDiaVencimento());
             ps.executeUpdate();
         } catch (SQLException e) { throw new RuntimeException("Erro ao salvar lançamento fixo: " + e.getMessage(), e); }
@@ -33,7 +33,7 @@ public class LancamentoFixoRepository {
              PreparedStatement ps = conn.prepareStatement(
                  "UPDATE lancamentos_fixos SET tipo=?, descricao=?, categoria_id=?, valor=?, conta_id=?, dia_vencimento=? WHERE id=?")) {
             ps.setString(1, lf.getTipo().name()); ps.setString(2, lf.getDescricao());
-            ps.setInt(3, lf.getCategoriaId()); ps.setDouble(4, lf.getValor());
+            ps.setInt(3, lf.getCategoriaId()); ps.setDouble(4, lf.getValor().doubleValue());
             ps.setInt(5, lf.getContaId()); ps.setInt(6, lf.getDiaVencimento()); ps.setInt(7, lf.getId());
             if (ps.executeUpdate() == 0) throw new RuntimeException("Lançamento fixo não encontrado com ID " + lf.getId());
         } catch (SQLException e) { throw new RuntimeException("Erro ao atualizar lançamento fixo: " + e.getMessage(), e); }
@@ -91,7 +91,7 @@ public class LancamentoFixoRepository {
                 lista.add(new LancamentoFixo(
                     rs.getInt("id"), Tipo.valueOf(rs.getString("tipo")), rs.getString("descricao"),
                     rs.getInt("categoria_id"), rs.getString("categoria_nome"),
-                    rs.getDouble("valor"), rs.getInt("conta_id"), rs.getString("conta_nome"),
+                    model.Dinheiro.de(rs.getDouble("valor")), rs.getInt("conta_id"), rs.getString("conta_nome"),
                     rs.getInt("dia_vencimento"), rs.getInt("ativo") == 1));
             }
         } catch (SQLException e) { throw new RuntimeException("Erro ao listar lançamentos fixos: " + e.getMessage(), e); }

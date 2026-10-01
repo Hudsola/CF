@@ -1,11 +1,12 @@
 package model;
 
 import javafx.beans.property.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class LinhaImportacao {
     private final StringProperty titulo          = new SimpleStringProperty();
-    private final DoubleProperty valor           = new SimpleDoubleProperty();
+    private final ObjectProperty<BigDecimal> valor = new SimpleObjectProperty<>();
     private final ObjectProperty<LocalDate> data = new SimpleObjectProperty<>();
     private final ObjectProperty<Categoria> categoria = new SimpleObjectProperty<>();
     private final StringProperty detalhe         = new SimpleStringProperty();
@@ -16,15 +17,15 @@ public class LinhaImportacao {
     /** Mapeamento encontrado na leitura (null quando a linha não tinha mapeamento). */
     private MapeamentoDescricao mapeamentoOriginal;
 
-    public LinhaImportacao(String titulo, double valor, LocalDate data) {
+    public LinhaImportacao(String titulo, BigDecimal valor, LocalDate data) {
         this.titulo.set(titulo);
-        this.valor.set(valor);
+        this.valor.set(Dinheiro.arredondar(valor));
         this.data.set(data);
         this.detalhe.set(titulo);
     }
 
     public StringProperty tituloProperty()           { return titulo; }
-    public DoubleProperty valorProperty()             { return valor; }
+    public ObjectProperty<BigDecimal> valorProperty() { return valor; }
     public ObjectProperty<LocalDate> dataProperty()   { return data; }
     public ObjectProperty<Categoria> categoriaProperty() { return categoria; }
     public StringProperty detalheProperty()           { return detalhe; }
@@ -33,7 +34,7 @@ public class LinhaImportacao {
     public StringProperty observacaoProperty()        { return observacao; }
 
     public String getTitulo()         { return titulo.get(); }
-    public double getValor()          { return valor.get(); }
+    public BigDecimal getValor()      { return valor.get(); }
     public LocalDate getData()        { return data.get(); }
     public Categoria getCategoria()   { return categoria.get(); }
     public String getDetalhe()        { return detalhe.get(); }

@@ -266,6 +266,32 @@
     -fx-border-color: #4A9EE8;
 }
 
+/* --- DatePicker e Spinner no tema escuro --- */
+.date-picker, .spinner {
+    -fx-text-inner-color: #d0d0d0;
+    -fx-prompt-text-fill: #555555;
+    -fx-background-color: #252525;
+    -fx-background-radius: 3;
+}
+
+.date-picker > .text-field, .spinner > .text-field {
+    -fx-padding: 6 10 6 10;
+    -fx-background-color: #252525;
+    -fx-text-fill: #d0d0d0;
+    -fx-prompt-text-fill: #555555;
+    -fx-border-color: #333333;
+    -fx-border-radius: 3 0 0 3;
+    -fx-background-radius: 3 0 0 3;
+}
+
+.date-picker > .arrow-button, .spinner > .increment-arrow-button, .spinner > .decrement-arrow-button {
+    -fx-background-color: #333333;
+}
+
+.date-picker > .arrow-button > .arrow, .spinner .increment-arrow, .spinner .decrement-arrow {
+    -fx-background-color: #aaaaaa;
+}
+
 .form-label {
     -fx-text-fill: #888888;
     -fx-font-size: 12px;

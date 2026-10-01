@@ -1,5 +1,9 @@
 package service;
 
+import model.Dinheiro;
+import model.Meses;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -21,10 +25,10 @@ public final class Conversor {
     private Conversor() {}
 
     /**
-     * Converte "1.500,00", "1500,00", "1500.00", "1.500", "R$ 1.500,00" ou "-12,30" em double.
+     * Converte "1.500,00", "1500,00", "1500.00", "1.500", "R$ 1.500,00" ou "-12,30" em valor com 2 casas.
      * O separador que aparece por último (vírgula ou ponto) é tratado como decimal.
      */
-    public static double parseValor(String texto) {
+    public static BigDecimal parseValor(String texto) {
         if (texto == null || texto.isBlank()) throw new IllegalArgumentException("Informe um valor.");
         String s = texto.replace("R$", "").replace("\"", "").replaceAll("[\\s\\u00A0]", "");
         int virgula = s.lastIndexOf(','), ponto = s.lastIndexOf('.');
@@ -37,13 +41,16 @@ public final class Conversor {
         }
         if (!NUMERO.matcher(s).matches())
             throw new IllegalArgumentException("Valor inválido: \"" + texto.trim() + "\". Use o formato 1.500,00.");
-        return Double.parseDouble(s);
+        BigDecimal valor = new BigDecimal(s);
+        if (valor.scale() > 2)
+            throw new IllegalArgumentException("Valor inválido: \"" + texto.trim() + "\". Use no máximo 2 casas decimais.");
+        return Dinheiro.arredondar(valor);
     }
 
     /** Igual a {@link #parseValor(String)}, mas exige valor maior que zero. */
-    public static double parseValorPositivo(String texto) {
-        double v = parseValor(texto);
-        if (v <= 0) throw new IllegalArgumentException("Valor deve ser maior que zero.");
+    public static BigDecimal parseValorPositivo(String texto) {
+        BigDecimal v = parseValor(texto);
+        if (v.signum() <= 0) throw new IllegalArgumentException("Valor deve ser maior que zero.");
         return v;
     }
 
@@ -56,8 +63,8 @@ public final class Conversor {
         throw new IllegalArgumentException("Data inválida: \"" + s + "\". Use dd/mm/aaaa ou aaaa-mm-dd.");
     }
 
-    /** Nome do mês em maiúsculas, igual ao gravado no banco (ex: "MARÇO"). */
+    /** Nome do mês em maiúsculas (ex: "MARÇO"). */
     public static String nomeMes(LocalDate data) {
-        return ControleFinanceiro.MESES.get(data.getMonthValue() - 1);
+        return Meses.nome(data);
     }
 }

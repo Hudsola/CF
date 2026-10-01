@@ -56,7 +56,7 @@ class ImportacaoCsvTest {
         assertEquals(2, r.linhas().size());
         assertEquals("Padaria São João", r.linhas().get(0).getTitulo());
         assertEquals("Mercado, Centro", r.linhas().get(1).getTitulo());
-        assertEquals(120.00, r.linhas().get(1).getValor(), 0.001);
+        util.Assercoes.assertValor("120.00", r.linhas().get(1).getValor());
     }
 
     @Test
@@ -69,7 +69,7 @@ class ImportacaoCsvTest {
         assertTrue(r.erros().isEmpty(), r.erros().toString());
         LinhaImportacao li = r.linhas().get(0);
         assertEquals("Açougue", li.getTitulo());
-        assertEquals(1234.56, li.getValor(), 0.001);
+        util.Assercoes.assertValor("1234.56", li.getValor());
         assertEquals(LocalDate.of(2026, 7, 1), li.getData());
     }
 

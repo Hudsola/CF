@@ -1,29 +1,20 @@
 package service;
 
-import db.DatabaseManager;
 import model.*;
 import repository.*;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CodingErrorAction;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.SQLException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/** Fachada usada pelas telas: cadastros, lançamentos fixos, importação, relatórios e progresso. */
 public class ControleFinanceiro {
 
-    public static final List<String> MESES = List.of(
-            "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
-            "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO");
+    public static final List<String> MESES = Meses.NOMES;
 
     private final CategoriaRepository categoriaRepo = new CategoriaRepository();
     private final ContaRepository contaRepo = new ContaRepository();
@@ -32,103 +23,92 @@ public class ControleFinanceiro {
     private final InvestimentoRepository investRepo = new InvestimentoRepository();
     private final LancamentoFixoRepository fixoRepo = new LancamentoFixoRepository();
     private final UsuarioRepository usuarioRepo = new UsuarioRepository();
-    private final MapeamentoRepository mapeamentoRepo = new MapeamentoRepository();
+    private final ImportacaoCsv importacao = new ImportacaoCsv();
 
     // --- Usuário ---
+
     public Usuario getUsuario() {
         return usuarioRepo.buscarPrincipal();
     }
 
-    public void atualizarUsuario(Usuario u) {
-        usuarioRepo.atualizar(u);
+    public void atualizarUsuario(String nome, LocalDate dataNascimento) {
+        if (nome == null || nome.isBlank()) throw new IllegalArgumentException("Informe o nome.");
+        if (dataNascimento != null && dataNascimento.isAfter(LocalDate.now()))
+            throw new IllegalArgumentException("Data de nascimento no futuro.");
+        usuarioRepo.atualizar(new Usuario(getUsuario().getId(), nome.trim(), dataNascimento));
+    }
+
+    /** Nível e XP calculados a partir de todos os lançamentos (ver {@link CalculadoraXp}). */
+    public Progresso getProgresso() {
+        return CalculadoraXp.calcular(getReceitas(), getDespesas(), getInvestimentos(), LocalDate.now());
     }
 
     // --- Categorias ---
-    public void salvarCategoria(Categoria c) {
-        categoriaRepo.salvar(c);
-    }
 
-    public void atualizarCategoria(Categoria c) {
-        categoriaRepo.atualizar(c);
-    }
-
-    public void excluirCategoria(int id) {
-        categoriaRepo.excluir(id);
-    }
-
-    public List<Categoria> getCategorias() {
-        return categoriaRepo.listarTodos();
-    }
+    public void salvarCategoria(Categoria c)   { categoriaRepo.salvar(validarNome(c.getNome(), c)); }
+    public void atualizarCategoria(Categoria c) { categoriaRepo.atualizar(validarNome(c.getNome(), c)); }
+    public void excluirCategoria(int id)        { categoriaRepo.excluir(id); }
+    public List<Categoria> getCategorias()      { return categoriaRepo.listarTodos(); }
 
     // --- Contas ---
-    public void salvarConta(Conta c) {
-        contaRepo.salvar(c);
-    }
 
-    public void atualizarConta(Conta c) {
-        contaRepo.atualizar(c);
-    }
-
-    public void excluirConta(int id) {
-        contaRepo.excluir(id);
-    }
-
-    public List<Conta> getContas() {
-        return contaRepo.listarTodos();
-    }
+    public void salvarConta(Conta c)   { contaRepo.salvar(validarNome(c.getNome(), c)); }
+    public void atualizarConta(Conta c) { contaRepo.atualizar(validarNome(c.getNome(), c)); }
+    public void excluirConta(int id)    { contaRepo.excluir(id); }
+    public List<Conta> getContas()      { return contaRepo.listarTodos(); }
 
     // --- Receitas ---
+
     public void salvarReceita(Receita r) {
+        validarLancamento(r.getOrigem(), "Origem", r.getValor(), r.getData());
         receitaRepo.salvar(r);
     }
 
     public void atualizarReceita(Receita r) {
+        validarLancamento(r.getOrigem(), "Origem", r.getValor(), r.getData());
         receitaRepo.atualizar(r);
     }
 
-    public void excluirReceita(int id) {
-        receitaRepo.excluir(id);
-    }
-
-    public List<Receita> getReceitas() {
-        return receitaRepo.listarTodos();
-    }
+    public void excluirReceita(int id)    { receitaRepo.excluir(id); }
+    public List<Receita> getReceitas()    { return receitaRepo.listarTodos(); }
 
     // --- Despesas ---
+
     public void salvarDespesa(Despesa d) {
+        validarLancamento(d.getDetalhamento(), "Detalhamento", d.getValor(), d.getData());
         despesaRepo.salvar(d);
     }
 
     public void atualizarDespesa(Despesa d) {
+        validarLancamento(d.getDetalhamento(), "Detalhamento", d.getValor(), d.getData());
         despesaRepo.atualizar(d);
     }
 
-    public void excluirDespesa(int id) {
-        despesaRepo.excluir(id);
-    }
+    public void excluirDespesa(int id)    { despesaRepo.excluir(id); }
+    public List<Despesa> getDespesas()    { return despesaRepo.listarTodos(); }
 
-    public List<Despesa> getDespesas() {
-        return despesaRepo.listarTodos();
+    /** Despesas do ano (ou de um mês dele), opcionalmente de uma categoria. */
+    public List<Despesa> pesquisarDespesas(Integer categoriaId, int ano, String mes) {
+        return despesaRepo.pesquisar(categoriaId, Periodo.de(ano, mes));
     }
 
     // --- Investimentos ---
+
     public void salvarInvestimento(Investimento i) {
+        validarLancamento(i.getTipo(), "Tipo", i.getValor(), i.getData());
         investRepo.salvar(i);
     }
 
     public void atualizarInvestimento(Investimento i) {
+        validarLancamento(i.getTipo(), "Tipo", i.getValor(), i.getData());
         investRepo.atualizar(i);
     }
 
-    public void excluirInvestimento(int id) {
-        investRepo.excluir(id);
-    }
-
-    public List<Investimento> getInvestimentos() {
-        return investRepo.listarTodos();
-    }
+    public void excluirInvestimento(int id)        { investRepo.excluir(id); }
+    public List<Investimento> getInvestimentos()   { return investRepo.listarTodos(); }
 
     // --- Lançamentos Fixos ---
+
     public void salvarLancamentoFixo(LancamentoFixo lf) {
         validarFixo(lf);
         fixoRepo.salvar(lf);
@@ -139,51 +119,22 @@ public class ControleFinanceiro {
         fixoRepo.atualizar(lf);
     }
 
-    private void validarFixo(LancamentoFixo lf) {
-        if (lf.getTipo() == LancamentoFixo.Tipo.DESPESA && lf.getCategoriaId() <= 0)
-            throw new IllegalArgumentException("Lançamento fixo de despesa precisa de uma categoria.");
-        if (lf.getValor() <= 0)
-            throw new IllegalArgumentException("Valor deve ser maior que zero.");
-    }
-
-    /** Converte "março", "Março" ou "MARÇO" no nome padronizado; erro se não for um mês. */
-    private static String normalizarMes(String mes) {
-        String m = mes == null ? "" : mes.trim().toUpperCase(Locale.ROOT);
-        if (!MESES.contains(m)) throw new IllegalArgumentException("Mês inválido: \"" + mes + "\".");
-        return m;
-    }
-
-    public void excluirLancamentoFixo(int id) {
-        fixoRepo.excluir(id);
-    }
-
-    public void alternarAtivoFixo(int id) {
-        fixoRepo.alternarAtivo(id);
-    }
-
-    public List<LancamentoFixo> getLancamentosFixos() {
-        return fixoRepo.listarTodos();
-    }
-
-    public List<LancamentoFixo> getLancamentosFixosAtivos() {
-        return fixoRepo.listarAtivos();
-    }
+    public void excluirLancamentoFixo(int id)              { fixoRepo.excluir(id); }
+    public void alternarAtivoFixo(int id)                  { fixoRepo.alternarAtivo(id); }
+    public List<LancamentoFixo> getLancamentosFixos()      { return fixoRepo.listarTodos(); }
+    public List<LancamentoFixo> getLancamentosFixosAtivos() { return fixoRepo.listarAtivos(); }
 
     public int aplicarFixosMes(String mesInformado, int ano) {
-        String mes = normalizarMes(mesInformado);
-        YearMonth ym = YearMonth.of(ano, MESES.indexOf(mes) + 1);
+        YearMonth ym = YearMonth.of(ano, Meses.numero(mesInformado));
+        String mes = Meses.nome(ym.getMonthValue());
         int aplicados = 0;
         for (LancamentoFixo lf : fixoRepo.listarAtivos()) {
             if (fixoRepo.jaAplicado(lf.getId(), mes, ano)) continue;
-            int dia = Math.min(lf.getDiaVencimento(), ym.lengthOfMonth());
-            LocalDate data = LocalDate.of(ano, ym.getMonthValue(), dia);
+            LocalDate data = ym.atDay(Math.min(lf.getDiaVencimento(), ym.lengthOfMonth()));
             switch (lf.getTipo()) {
-                case RECEITA ->
-                        salvarReceita(new Receita(lf.getDescricao(), lf.getValor(), lf.getContaId(), data, mes, ano));
-                case DESPESA ->
-                        salvarDespesa(new Despesa(lf.getCategoriaId(), lf.getDescricao(), lf.getValor(), lf.getContaId(), data, mes, ano));
-                case INVESTIMENTO ->
-                        salvarInvestimento(new Investimento(lf.getDescricao(), lf.getValor(), lf.getContaId(), data, mes, ano));
+                case RECEITA -> salvarReceita(new Receita(lf.getDescricao(), lf.getValor(), lf.getContaId(), data));
+                case DESPESA -> salvarDespesa(new Despesa(lf.getCategoriaId(), lf.getDescricao(), lf.getValor(), lf.getContaId(), data));
+                case INVESTIMENTO -> salvarInvestimento(new Investimento(lf.getDescricao(), lf.getValor(), lf.getContaId(), data));
             }
             fixoRepo.registrarAplicacao(lf.getId(), mes, ano);
             aplicados++;
@@ -192,352 +143,132 @@ public class ControleFinanceiro {
     }
 
     public int aplicarFixosIntervalo(String mesInicio, int anoInicio, String mesFim, int anoFim) {
-        int total = 0;
-        YearMonth atual = YearMonth.of(anoInicio, MESES.indexOf(normalizarMes(mesInicio)) + 1);
-        YearMonth fim = YearMonth.of(anoFim, MESES.indexOf(normalizarMes(mesFim)) + 1);
+        YearMonth atual = YearMonth.of(anoInicio, Meses.numero(mesInicio));
+        YearMonth fim = YearMonth.of(anoFim, Meses.numero(mesFim));
         if (atual.isAfter(fim))
             throw new IllegalArgumentException("O mês inicial deve ser anterior ou igual ao mês final.");
-
-        while (!atual.isAfter(fim)) {
-            String mes = MESES.get(atual.getMonthValue() - 1);
-            total += aplicarFixosMes(mes, atual.getYear());
-            atual = atual.plusMonths(1);
-        }
+        int total = 0;
+        for (; !atual.isAfter(fim); atual = atual.plusMonths(1))
+            total += aplicarFixosMes(Meses.nome(atual.getMonthValue()), atual.getYear());
         return total;
     }
 
     // --- Importação CSV ---
 
-    /**
-     * Lê um extrato CSV (ex: fatura do Nubank: date,title,amount) e monta o preview da importação.
-     * Linhas com erro são puladas e descritas em {@code erros}; valores negativos (pagamentos,
-     * estornos) e despesas que já existem na conta vêm desmarcadas.
-     */
     public ResultadoLeituraCsv lerCsv(String caminho, int contaId) throws IOException {
-        List<String> texto = lerLinhasArquivo(Path.of(caminho));
-        List<LinhaImportacao> linhas = new ArrayList<>();
-        List<String> erros = new ArrayList<>();
-        if (texto.isEmpty()) return new ResultadoLeituraCsv(linhas, erros);
-
-        String cabecalho = texto.get(0);
-        char sep = cabecalho.indexOf(';') >= 0 && cabecalho.indexOf(',') < 0 ? ';' : ',';
-        int[] col = localizarColunas(parseLinhaCsv(cabecalho, sep));
-        int ultimaColuna = Math.max(col[0], Math.max(col[1], col[2]));
-
-        List<Categoria> categorias = getCategorias();
-        List<MapeamentoDescricao> mapeamentos = mapeamentoRepo.listarTodos();
-
-        for (int n = 1; n < texto.size(); n++) {
-            String linha = texto.get(n);
-            if (linha.isBlank()) continue;
-            try {
-                String[] partes = parseLinhaCsv(linha, sep);
-                if (partes.length <= ultimaColuna)
-                    throw new IllegalArgumentException("colunas insuficientes.");
-                LocalDate data = Conversor.parseData(partes[col[0]]);
-                String titulo  = partes[col[1]].trim();
-                double valor   = Conversor.parseValor(partes[col[2]]);
-
-                LinhaImportacao li = new LinhaImportacao(titulo, valor, data);
-                MapeamentoDescricao map = buscarMapeamento(mapeamentos, titulo);
-                if (map != null) {
-                    li.setMapeamentoOriginal(map);
-                    categorias.stream().filter(c -> c.getId() == map.getCategoriaId())
-                            .findFirst().ifPresent(li::setCategoria);
-                    li.setDetalhe(map.getDetalhe());
-                } else {
-                    li.setMapeamentoNovo(true);
-                }
-                if (valor <= 0) {
-                    li.setImportar(false);
-                    li.setObservacao("Crédito/estorno");
-                }
-                linhas.add(li);
-            } catch (IllegalArgumentException e) {
-                erros.add("Linha " + (n + 1) + ": " + e.getMessage());
-            }
-        }
-        marcarDuplicadas(linhas, contaId);
-        return new ResultadoLeituraCsv(linhas, erros);
+        return importacao.ler(caminho, contaId);
     }
 
-    /**
-     * Grava as linhas marcadas como despesas da conta, numa única transação: ou tudo é importado
-     * ou nada é. Também aprende mapeamentos novos e atualiza os existentes cuja categoria mudou.
-     */
     public int confirmarImportacao(List<LinhaImportacao> linhas, int contaId) {
-        List<LinhaImportacao> selecionadas = linhas.stream().filter(LinhaImportacao::isImportar).toList();
-        for (LinhaImportacao li : selecionadas) {
-            if (li.getCategoria() == null)
-                throw new IllegalArgumentException("\"" + li.getTitulo() + "\" está sem categoria.");
-            if (li.getValor() <= 0)
-                throw new IllegalArgumentException("\"" + li.getTitulo() + "\" tem valor negativo ou zero e não pode virar despesa.");
-            if (li.getDetalhe() == null || li.getDetalhe().isBlank())
-                throw new IllegalArgumentException("\"" + li.getTitulo() + "\" está sem detalhe.");
-        }
-
-        try (Connection conn = DatabaseManager.getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                for (LinhaImportacao li : selecionadas) {
-                    int catId = li.getCategoria().getId();
-                    despesaRepo.salvar(conn, new Despesa(catId, li.getDetalhe(), li.getValor(), contaId,
-                            li.getData(), Conversor.nomeMes(li.getData()), li.getData().getYear()));
-
-                    MapeamentoDescricao original = li.getMapeamentoOriginal();
-                    if (original == null) {
-                        mapeamentoRepo.salvar(conn, new MapeamentoDescricao(li.getTitulo(), catId, li.getDetalhe()));
-                    } else if (original.getCategoriaId() != catId) {
-                        mapeamentoRepo.salvar(conn, new MapeamentoDescricao(original.getPadrao(), catId, li.getDetalhe()));
-                    }
-                }
-                conn.commit();
-            } catch (SQLException | RuntimeException e) {
-                conn.rollback();
-                throw e;
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao importar despesas (nada foi gravado): " + e.getMessage(), e);
-        }
-        return selecionadas.size();
+        return importacao.confirmar(linhas, contaId);
     }
 
-    /** Lê o arquivo como UTF-8; se não for UTF-8 válido, usa Windows-1252 (padrão do Excel no Windows). */
-    static List<String> lerLinhasArquivo(Path arquivo) throws IOException {
-        byte[] bytes = Files.readAllBytes(arquivo);
-        String texto;
-        try {
-            texto = StandardCharsets.UTF_8.newDecoder()
-                    .onMalformedInput(CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(ByteBuffer.wrap(bytes)).toString();
-        } catch (CharacterCodingException e) {
-            texto = new String(bytes, Charset.forName("windows-1252"));
-        }
-        if (texto.startsWith("﻿")) texto = texto.substring(1);
-        return texto.lines().toList();
+    // --- Relatórios ---
+
+    /** Totais do ano inteiro ({@code mes} = "Todos") ou de um mês. */
+    public TotaisPeriodo totais(int ano, String mes) {
+        Periodo p = Periodo.de(ano, mes);
+        return new TotaisPeriodo(
+                somar(receitaRepo.listarPorPeriodo(p), Receita::getValor),
+                somar(despesaRepo.listarPorPeriodo(p), Despesa::getValor),
+                somar(investRepo.listarPorPeriodo(p), Investimento::getValor));
     }
 
-    /** Índices das colunas [data, descrição, valor] pelo cabeçalho; sem cabeçalho reconhecido usa 0, 1, 2. */
-    private static int[] localizarColunas(String[] cabecalho) {
-        int data = -1, titulo = -1, valor = -1;
-        for (int i = 0; i < cabecalho.length; i++) {
-            String h = cabecalho[i].trim().toLowerCase(Locale.ROOT);
-            if (data < 0 && (h.equals("date") || h.equals("data"))) data = i;
-            else if (titulo < 0 && (h.equals("title") || h.startsWith("descri") || h.startsWith("hist"))) titulo = i;
-            else if (valor < 0 && (h.equals("amount") || h.equals("valor"))) valor = i;
-        }
-        if (data < 0 || titulo < 0 || valor < 0) return new int[]{0, 1, 2};
-        return new int[]{data, titulo, valor};
+    /** Saldo de todo o histórico: receitas − despesas − investimentos. */
+    public BigDecimal saldoTotal() {
+        return somar(getReceitas(), Receita::getValor)
+                .subtract(somar(getDespesas(), Despesa::getValor))
+                .subtract(somar(getInvestimentos(), Investimento::getValor));
     }
 
-    /** Mapeamento cujo padrão aparece no título; havendo vários, o mais específico (mais longo). */
-    private static MapeamentoDescricao buscarMapeamento(List<MapeamentoDescricao> mapeamentos, String titulo) {
-        String t = titulo.toLowerCase(Locale.ROOT);
-        return mapeamentos.stream()
-                .filter(m -> t.contains(m.getPadrao().toLowerCase(Locale.ROOT)))
-                .max(Comparator.comparingInt(m -> m.getPadrao().length()))
-                .orElse(null);
+    public Map<String, BigDecimal> divisaoReceitasPorOrigem(int ano, String mes) {
+        return agruparOrdenado(receitaRepo.listarPorPeriodo(Periodo.de(ano, mes)), Receita::getOrigem, Receita::getValor);
     }
 
-    /**
-     * Desmarca linhas que já existem como despesa na conta (mesma data e valor). A contagem é por
-     * ocorrência: se o banco tem 1 despesa igual e o CSV tem 2, só a primeira é desmarcada.
-     */
-    private void marcarDuplicadas(List<LinhaImportacao> linhas, int contaId) {
-        List<LinhaImportacao> candidatas = linhas.stream().filter(l -> l.getValor() > 0).toList();
-        if (candidatas.isEmpty()) return;
-        LocalDate ini = candidatas.stream().map(LinhaImportacao::getData).min(LocalDate::compareTo).orElseThrow();
-        LocalDate fim = candidatas.stream().map(LinhaImportacao::getData).max(LocalDate::compareTo).orElseThrow();
-
-        Map<String, Integer> existentes = new HashMap<>();
-        for (Despesa d : despesaRepo.listarPorContaEPeriodo(contaId, ini, fim))
-            existentes.merge(chaveDuplicidade(d.getData(), d.getValor()), 1, Integer::sum);
-
-        for (LinhaImportacao li : candidatas) {
-            String chave = chaveDuplicidade(li.getData(), li.getValor());
-            int qtd = existentes.getOrDefault(chave, 0);
-            if (qtd > 0) {
-                existentes.put(chave, qtd - 1);
-                li.setImportar(false);
-                li.setObservacao("Já importada?");
-            }
-        }
+    public Map<String, BigDecimal> divisaoGastosPorCategoria(int ano, String mes) {
+        return agruparOrdenado(despesaRepo.listarPorPeriodo(Periodo.de(ano, mes)), Despesa::getCategoriaNome, Despesa::getValor);
     }
 
-    private static String chaveDuplicidade(LocalDate data, double valor) {
-        return data + "|" + Math.round(valor * 100);
+    public Map<String, BigDecimal> divisaoInvestimentosPorTipo(int ano, String mes) {
+        return agruparOrdenado(investRepo.listarPorPeriodo(Periodo.de(ano, mes)), Investimento::getTipo, Investimento::getValor);
     }
 
-    /** Divide uma linha CSV respeitando aspas ("a, b") e aspas escapadas (""). */
-    private static String[] parseLinhaCsv(String linha, char sep) {
-        List<String> campos = new ArrayList<>();
-        StringBuilder sb = new StringBuilder();
-        boolean dentroAspas = false;
-        for (int i = 0; i < linha.length(); i++) {
-            char c = linha.charAt(i);
-            if (c == '"') {
-                if (dentroAspas && i + 1 < linha.length() && linha.charAt(i + 1) == '"') { sb.append('"'); i++; }
-                else dentroAspas = !dentroAspas;
-            }
-            else if (c == sep && !dentroAspas) { campos.add(sb.toString()); sb.setLength(0); }
-            else { sb.append(c); }
-        }
-        campos.add(sb.toString());
-        return campos.toArray(new String[0]);
-    }
-
-    // --- Cálculos ---
-
-    public double somarReceitas(String mes, int ano) {
-        return receitaRepo.listarPorAno(ano).stream()
-                .filter(r -> r.getMes().equalsIgnoreCase(mes)).mapToDouble(Receita::getValor).sum();
-    }
-
-    public double somarReceitasAno(int ano) {
-        return receitaRepo.listarPorAno(ano).stream().mapToDouble(Receita::getValor).sum();
-    }
-
-    public double somarInvestimentos(String mes, int ano) {
-        return investRepo.listarPorAno(ano).stream()
-                .filter(i -> i.getMes().equalsIgnoreCase(mes)).mapToDouble(Investimento::getValor).sum();
-    }
-
-    public double somarInvestimentosAno(int ano) {
-        return investRepo.listarPorAno(ano).stream().mapToDouble(Investimento::getValor).sum();
-    }
-
-    public double somarDespesas(String nomeCategoria, String mes, int ano) {
-        return despesaRepo.listarPorAno(ano).stream()
-                .filter(d -> d.getCategoriaNome().equalsIgnoreCase(nomeCategoria) && d.getMes().equalsIgnoreCase(mes))
-                .mapToDouble(Despesa::getValor).sum();
-    }
-
-    public double somarDespesasCategoriaAno(String nomeCategoria, int ano) {
-        return despesaRepo.listarPorAno(ano).stream()
-                .filter(d -> d.getCategoriaNome().equalsIgnoreCase(nomeCategoria))
-                .mapToDouble(Despesa::getValor).sum();
-    }
-
-    public double somarTotalDespesas(String mes, int ano) {
-        return despesaRepo.listarPorAno(ano).stream()
-                .filter(d -> d.getMes().equalsIgnoreCase(mes)).mapToDouble(Despesa::getValor).sum();
-    }
-
-    public double somarTotalDespesasAno(int ano) {
-        return despesaRepo.listarPorAno(ano).stream().mapToDouble(Despesa::getValor).sum();
-    }
-
-    public double saldoTotal() {
-        double rec = getReceitas().stream().mapToDouble(Receita::getValor).sum();
-        double desp = getDespesas().stream().mapToDouble(Despesa::getValor).sum();
-        double inv = getInvestimentos().stream().mapToDouble(Investimento::getValor).sum();
-        return rec - desp - inv;
-    }
-
-    private boolean todos(String mes) {
-        return "Todos".equalsIgnoreCase(mes);
-    }
-
-    public double porcentagemRendaGasta(int ano, String mes) {
-        double rec = todos(mes) ? somarReceitasAno(ano) : somarReceitas(mes, ano);
-        double desp = todos(mes) ? somarTotalDespesasAno(ano) : somarTotalDespesas(mes, ano);
-        return rec == 0 ? 0 : desp / rec;
-    }
-
-    public double porcentagemRendaInvestida(int ano, String mes) {
-        double rec = todos(mes) ? somarReceitasAno(ano) : somarReceitas(mes, ano);
-        double inv = todos(mes) ? somarInvestimentosAno(ano) : somarInvestimentos(mes, ano);
-        return rec == 0 ? 0 : inv / rec;
-    }
-
-    public double saldoEmConta(int ano, String mes) {
-        double rec = todos(mes) ? somarReceitasAno(ano) : somarReceitas(mes, ano);
-        double desp = todos(mes) ? somarTotalDespesasAno(ano) : somarTotalDespesas(mes, ano);
-        double inv = todos(mes) ? somarInvestimentosAno(ano) : somarInvestimentos(mes, ano);
-        return rec - desp - inv;
-    }
-
-    // --- Divisões ---
-
-    public Map<String, Double> divisaoReceitasPorOrigem(int ano, String mes) {
-        Map<String, Double> r = new LinkedHashMap<>();
-        receitaRepo.listarPorAno(ano).stream()
-                .filter(x -> todos(mes) || x.getMes().equalsIgnoreCase(mes))
-                .collect(Collectors.groupingBy(Receita::getOrigem, Collectors.summingDouble(Receita::getValor)))
-                .entrySet().stream().sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-                .forEach(e -> r.put(e.getKey(), e.getValue()));
-        return r;
-    }
-
-    public Map<String, Double> divisaoGastosPorCategoria(int ano, String mes) {
-        Map<String, Double> r = new LinkedHashMap<>();
-        getCategorias().forEach(cat -> {
-            double v = todos(mes) ? somarDespesasCategoriaAno(cat.getNome(), ano)
-                    : somarDespesas(cat.getNome(), mes, ano);
-            if (v > 0) r.put(cat.getNome(), v);
-        });
-        return r;
-    }
-
-    public Map<String, Double> divisaoInvestimentosPorTipo(int ano, String mes) {
-        Map<String, Double> r = new LinkedHashMap<>();
-        investRepo.listarPorAno(ano).stream()
-                .filter(x -> todos(mes) || x.getMes().equalsIgnoreCase(mes))
-                .collect(Collectors.groupingBy(Investimento::getTipo, Collectors.summingDouble(Investimento::getValor)))
-                .entrySet().stream().sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-                .forEach(e -> r.put(e.getKey(), e.getValue()));
-        return r;
-    }
-
-    // --- Resumo anual ---
-
+    /** Doze resumos (janeiro a dezembro) com saldo e saldo acumulado; faz 3 consultas ao banco. */
     public List<ResumoMensal> gerarResumoAnual(int ano) {
+        Periodo p = Periodo.doAno(ano);
+        Map<Integer, BigDecimal> rec = somarPorMes(receitaRepo.listarPorPeriodo(p), Receita::getData, Receita::getValor);
+        Map<Integer, BigDecimal> inv = somarPorMes(investRepo.listarPorPeriodo(p), Investimento::getData, Investimento::getValor);
+        List<Despesa> despesas = despesaRepo.listarPorPeriodo(p);
+        Map<Integer, BigDecimal> desp = somarPorMes(despesas, Despesa::getData, Despesa::getValor);
+
         List<ResumoMensal> resumos = new ArrayList<>();
-        double saldoAcum = 0;
-        for (String mes : MESES) {
-            ResumoMensal rm = new ResumoMensal(mes);
-            double rec = somarReceitas(mes, ano);
-            double inv = somarInvestimentos(mes, ano);
-            double desp = somarTotalDespesas(mes, ano);
-            rm.setReceita(rec);
-            rm.setInvestimentos(inv);
-            rm.setDespesaTotal(desp);
-            rm.setAlimentacao(somarDespesas("Alimentação", mes, ano));
-            rm.setMoradia(somarDespesas("Moradia", mes, ano));
-            rm.setEducacao(somarDespesas("Educação", mes, ano));
-            rm.setPet(somarDespesas("Pet", mes, ano));
-            rm.setSaude(somarDespesas("Saúde", mes, ano));
-            rm.setTransporte(somarDespesas("Transporte", mes, ano));
-            rm.setPessoais(somarDespesas("Pessoais", mes, ano));
-            rm.setLazer(somarDespesas("Lazer", mes, ano));
-            rm.setFinanceiros(somarDespesas("Financeiros", mes, ano));
-            double saldo = rec - desp - inv;   // mesma regra de saldoEmConta()
+        BigDecimal acumulado = Dinheiro.ZERO;
+        for (int m = 1; m <= 12; m++) {
+            ResumoMensal rm = new ResumoMensal(Meses.nome(m));
+            rm.setReceita(rec.getOrDefault(m, Dinheiro.ZERO));
+            rm.setInvestimentos(inv.getOrDefault(m, Dinheiro.ZERO));
+            rm.setDespesaTotal(desp.getOrDefault(m, Dinheiro.ZERO));
+            BigDecimal saldo = rm.getReceita().subtract(rm.getDespesaTotal()).subtract(rm.getInvestimentos());
             rm.setSaldo(saldo);
-            saldoAcum += saldo;
-            rm.setSaldoAcumulado(saldoAcum);
+            acumulado = acumulado.add(saldo);
+            rm.setSaldoAcumulado(acumulado);
             resumos.add(rm);
         }
+        for (Despesa d : despesas)
+            resumos.get(d.getData().getMonthValue() - 1).getDespesasPorCategoria()
+                    .merge(d.getCategoriaNome(), d.getValor(), BigDecimal::add);
         return resumos;
     }
 
     public List<Integer> anosDisponiveis() {
-        Set<Integer> anos = new TreeSet<>();
-        getReceitas().forEach(r -> anos.add(r.getAno()));
-        getDespesas().forEach(d -> anos.add(d.getAno()));
-        getInvestimentos().forEach(i -> anos.add(i.getAno()));
+        Set<Integer> anos = new TreeSet<>(receitaRepo.anos());
+        anos.addAll(despesaRepo.anos());
+        anos.addAll(investRepo.anos());
         return new ArrayList<>(anos);
     }
 
-    public List<Despesa> pesquisarDespesas(Integer categoriaId, String mes, int ano) {
-        return despesaRepo.pesquisar(categoriaId, mes, ano);
+    // --- Auxiliares ---
+
+    private static <T> BigDecimal somar(List<T> itens, Function<T, BigDecimal> valor) {
+        return itens.stream().map(valor).reduce(Dinheiro.ZERO, BigDecimal::add);
     }
 
-    public List<Receita> pesquisarReceitas(String origem, String mes, int ano) {
-        return receitaRepo.pesquisar(origem, mes, ano);
+    private static <T> Map<Integer, BigDecimal> somarPorMes(List<T> itens, Function<T, LocalDate> data,
+                                                           Function<T, BigDecimal> valor) {
+        Map<Integer, BigDecimal> r = new HashMap<>();
+        for (T t : itens) r.merge(data.apply(t).getMonthValue(), valor.apply(t), BigDecimal::add);
+        return r;
     }
 
-    public List<Investimento> pesquisarInvestimentos(String tipo, String mes, int ano) {
-        return investRepo.pesquisar(tipo, mes, ano);
+    /** Soma por chave, do maior para o menor valor. */
+    private static <T> Map<String, BigDecimal> agruparOrdenado(List<T> itens, Function<T, String> chave,
+                                                              Function<T, BigDecimal> valor) {
+        return itens.stream()
+                .collect(Collectors.groupingBy(chave, Collectors.reducing(Dinheiro.ZERO, valor, BigDecimal::add)))
+                .entrySet().stream()
+                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
+    }
+
+    private static void validarLancamento(String texto, String campo, BigDecimal valor, LocalDate data) {
+        if (texto == null || texto.isBlank()) throw new IllegalArgumentException(campo + " é obrigatório.");
+        if (valor == null || valor.signum() <= 0) throw new IllegalArgumentException("Valor deve ser maior que zero.");
+        if (data == null) throw new IllegalArgumentException("Selecione uma data.");
+    }
+
+    private static <T> T validarNome(String nome, T item) {
+        if (nome == null || nome.isBlank()) throw new IllegalArgumentException("Nome obrigatório.");
+        return item;
+    }
+
+    private static void validarFixo(LancamentoFixo lf) {
+        if (lf.getDescricao() == null || lf.getDescricao().isBlank())
+            throw new IllegalArgumentException("Descrição obrigatória.");
+        if (lf.getTipo() == LancamentoFixo.Tipo.DESPESA && lf.getCategoriaId() <= 0)
+            throw new IllegalArgumentException("Lançamento fixo de despesa precisa de uma categoria.");
+        if (lf.getValor().signum() <= 0)
+            throw new IllegalArgumentException("Valor deve ser maior que zero.");
+        if (lf.getDiaVencimento() < 1 || lf.getDiaVencimento() > 31)
+            throw new IllegalArgumentException("Dia do mês deve estar entre 1 e 31.");
     }
 }

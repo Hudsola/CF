@@ -1,26 +1,27 @@
 package repository;
 
 import db.DatabaseManager;
+import model.Dinheiro;
+import model.Periodo;
 import model.Receita;
 
 import java.sql.*;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class ReceitaRepository {
 
     private static final String SELECT_BASE =
-        "SELECT r.id, r.origem, r.valor, r.conta_id, c.nome AS conta_nome, r.data, r.mes, r.ano " +
+        "SELECT r.id, r.origem, r.valor, r.conta_id, c.nome AS conta_nome, r.data " +
         "FROM receitas r JOIN contas c ON c.id = r.conta_id ";
 
     public void salvar(Receita r) {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                 "INSERT INTO receitas (origem, valor, conta_id, data, mes, ano) VALUES (?,?,?,?,?,?)")) {
-            ps.setString(1, r.getOrigem()); ps.setDouble(2, r.getValor());
+                 "INSERT INTO receitas (origem, valor, conta_id, data) VALUES (?,?,?,?)")) {
+            ps.setString(1, r.getOrigem()); ps.setDouble(2, r.getValor().doubleValue());
             ps.setInt(3, r.getContaId()); ps.setString(4, r.getData().toString());
-            ps.setString(5, r.getMes()); ps.setInt(6, r.getAno());
             ps.executeUpdate();
         } catch (SQLException e) { throw new RuntimeException("Erro ao salvar receita: " + e.getMessage(), e); }
     }
@@ -28,41 +29,11 @@ public class ReceitaRepository {
     public void atualizar(Receita r) {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                 "UPDATE receitas SET origem=?, valor=?, conta_id=?, data=?, mes=?, ano=? WHERE id=?")) {
-            ps.setString(1, r.getOrigem()); ps.setDouble(2, r.getValor());
-            ps.setInt(3, r.getContaId()); ps.setString(4, r.getData().toString());
-            ps.setString(5, r.getMes()); ps.setInt(6, r.getAno()); ps.setInt(7, r.getId());
+                 "UPDATE receitas SET origem=?, valor=?, conta_id=?, data=? WHERE id=?")) {
+            ps.setString(1, r.getOrigem()); ps.setDouble(2, r.getValor().doubleValue());
+            ps.setInt(3, r.getContaId()); ps.setString(4, r.getData().toString()); ps.setInt(5, r.getId());
             if (ps.executeUpdate() == 0) throw new RuntimeException("Receita não encontrada com ID " + r.getId());
         } catch (SQLException e) { throw new RuntimeException("Erro ao atualizar receita: " + e.getMessage(), e); }
-    }
-
-    public List<Receita> listarTodos() { return query(SELECT_BASE + "ORDER BY r.data", null); }
-
-    public List<Receita> listarPorAno(int ano) {
-        return query(SELECT_BASE + "WHERE r.ano=? ORDER BY r.data", ano);
-    }
-
-    public List<Receita> listarPorMesAno(String mes, int ano) {
-        List<Receita> lista = new ArrayList<>();
-        String sql = SELECT_BASE + "WHERE r.mes=? AND r.ano=? ORDER BY r.data";
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, mes); ps.setInt(2, ano);
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) lista.add(map(rs));
-        } catch (SQLException e) { throw new RuntimeException("Erro ao listar receitas: " + e.getMessage(), e); }
-        return lista;
-    }
-
-    public List<Receita> listarFiltrado(String mes, Integer ano) {
-
-        if (ano == null)
-            return listarTodos();
-
-        if ("Todos".equalsIgnoreCase(mes))
-            return listarPorAno(ano);
-
-        return listarPorMesAno(mes, ano);
     }
 
     public void excluir(int id) {
@@ -73,66 +44,21 @@ public class ReceitaRepository {
         } catch (SQLException e) { throw new RuntimeException("Erro ao excluir receita: " + e.getMessage(), e); }
     }
 
-    private List<Receita> query(String sql, Integer ano) {
-        List<Receita> lista = new ArrayList<>();
-        try (Connection conn = DatabaseManager.getConnection()) {
-            ResultSet rs;
-            if (ano != null) {
-                PreparedStatement ps = conn.prepareStatement(sql);
-                ps.setInt(1, ano); rs = ps.executeQuery();
-            } else { rs = conn.createStatement().executeQuery(sql); }
-            while (rs.next()) lista.add(map(rs));
-        } catch (SQLException e) { throw new RuntimeException("Erro ao listar receitas: " + e.getMessage(), e); }
-        return lista;
+    public List<Receita> listarTodos() {
+        return Consultas.listar(SELECT_BASE + "ORDER BY r.data DESC, r.id DESC", List.of(), this::map, "receitas");
+    }
+
+    public List<Receita> listarPorPeriodo(Periodo p) {
+        return Consultas.listar(SELECT_BASE + "WHERE r.data BETWEEN ? AND ? ORDER BY r.data, r.id",
+                List.of(p.inicio().toString(), p.fim().toString()), this::map, "receitas");
+    }
+
+    public Set<Integer> anos() {
+        return Consultas.anos("receitas");
     }
 
     private Receita map(ResultSet rs) throws SQLException {
-        return new Receita(rs.getInt("id"), rs.getString("origem"), rs.getDouble("valor"),
-            rs.getInt("conta_id"), rs.getString("conta_nome"),
-            LocalDate.parse(rs.getString("data")), rs.getString("mes"), rs.getInt("ano"));
-    }
-
-    public List<Receita> pesquisar(String origem, String mes, Integer ano) {
-
-        StringBuilder sql = new StringBuilder(SELECT_BASE + "WHERE 1=1 ");
-        List<Object> parametros = new ArrayList<>();
-
-        if (origem != null && !origem.equalsIgnoreCase("Todas")) {
-            sql.append("AND r.origem = ? ");
-            parametros.add(origem);
-        }
-
-        if (mes != null && !mes.equalsIgnoreCase("Todos")) {
-            sql.append("AND r.mes = ? ");
-            parametros.add(mes);
-        }
-
-        if (ano != null) {
-            sql.append("AND r.ano = ? ");
-            parametros.add(ano);
-        }
-
-        sql.append("ORDER BY r.data DESC");
-
-        List<Receita> lista = new ArrayList<>();
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
-
-            for (int i = 0; i < parametros.size(); i++) {
-                ps.setObject(i + 1, parametros.get(i));
-            }
-
-            ResultSet rs = ps.executeQuery();
-
-            while (rs.next()) {
-                lista.add(map(rs));
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao pesquisar receitas.", e);
-        }
-
-        return lista;
+        return new Receita(rs.getInt("id"), rs.getString("origem"), Dinheiro.de(rs.getDouble("valor")),
+            rs.getInt("conta_id"), rs.getString("conta_nome"), LocalDate.parse(rs.getString("data")));
     }
 }

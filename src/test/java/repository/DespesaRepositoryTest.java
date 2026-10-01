@@ -1,77 +1,81 @@
 package repository;
 
-import model.Categoria;
 import model.Conta;
 import model.Despesa;
-import org.junit.jupiter.api.*;
+import model.Periodo;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import util.DatabaseTestHelper;
 
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static util.Assercoes.assertValor;
+import static util.Assercoes.v;
 
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class DespesaRepositoryTest {
 
     private final DespesaRepository   repo      = new DespesaRepository();
     private final ContaRepository     contaRepo = new ContaRepository();
     private final CategoriaRepository catRepo   = new CategoriaRepository();
     private int contaId;
-    private int categoriaId;
+    private int moradia;
+    private int lazer;
 
     @BeforeEach
     void setUp() {
         DatabaseTestHelper.setup();
         contaRepo.salvar(new Conta("Nubank"));
         contaId = contaRepo.listarTodos().get(0).getId();
-        categoriaId = catRepo.listarTodos().stream()
-            .filter(c -> c.getNome().equalsIgnoreCase("Moradia"))
-            .findFirst().orElseThrow().getId();
+        moradia = categoria("Moradia");
+        lazer = categoria("Lazer");
     }
 
-    private Despesa nova(String detalhe, double valor) {
-        return new Despesa(categoriaId, detalhe, valor, contaId,
-            LocalDate.of(2025, 6, 5), "JUNHO", 2025);
+    private int categoria(String nome) {
+        return catRepo.listarTodos().stream().filter(c -> c.getNome().equals(nome)).findFirst().orElseThrow().getId();
+    }
+
+    private Despesa nova(String detalhe, String valor) {
+        return new Despesa(moradia, detalhe, v(valor), contaId, LocalDate.of(2025, 6, 5));
     }
 
     @Test
-    @Order(1)
     void deveSalvarEListar() {
-        repo.salvar(nova("Condomínio", 850.00));
+        repo.salvar(nova("Condomínio", "850.00"));
         List<Despesa> lista = repo.listarTodos();
         assertEquals(1, lista.size());
         assertEquals("Condomínio", lista.get(0).getDetalhamento());
-        assertEquals(850.00, lista.get(0).getValor(), 0.01);
+        assertEquals("Moradia", lista.get(0).getCategoriaNome());
+        assertValor("850.00", lista.get(0).getValor());
     }
 
     @Test
-    @Order(2)
-    void deveListarPorAno() {
-        repo.salvar(nova("Condomínio", 850.00));
-        repo.salvar(new Despesa(categoriaId, "Aluguel", 1200.00, contaId,
-            LocalDate.of(2024, 3, 5), "MARÇO", 2024));
-        assertEquals(1, repo.listarPorAno(2025).size());
-        assertEquals(1, repo.listarPorAno(2024).size());
+    void devePesquisarPorPeriodoECategoria() {
+        repo.salvar(nova("Condomínio", "850.00"));
+        repo.salvar(new Despesa(lazer, "Cinema", v("40"), contaId, LocalDate.of(2025, 6, 20)));
+        repo.salvar(new Despesa(moradia, "Aluguel", v("1200.00"), contaId, LocalDate.of(2024, 3, 5)));
+
+        assertEquals(2, repo.listarPorPeriodo(Periodo.doAno(2025)).size());
+        assertEquals(1, repo.pesquisar(lazer, Periodo.doAno(2025)).size());
+        assertEquals(1, repo.pesquisar(moradia, Periodo.de(2024, "MARÇO")).size());
+        assertEquals(1, repo.listarPorContaEPeriodo(contaId, Periodo.de(2024, "Todos")).size());
     }
 
     @Test
-    @Order(3)
     void deveAtualizar() {
-        repo.salvar(nova("Internet", 100.00));
+        repo.salvar(nova("Internet", "100.00"));
         Despesa d = repo.listarTodos().get(0);
-        repo.atualizar(new Despesa(d.getId(), categoriaId, "Moradia", "Internet Fibra",
-            120.00, contaId, "Nubank", LocalDate.of(2025, 6, 5), "JUNHO", 2025));
+        repo.atualizar(new Despesa(d.getId(), moradia, "Moradia", "Internet Fibra",
+            v("120.00"), contaId, "Nubank", LocalDate.of(2025, 6, 5)));
         assertEquals("Internet Fibra", repo.listarTodos().get(0).getDetalhamento());
-        assertEquals(120.00, repo.listarTodos().get(0).getValor(), 0.01);
+        assertValor("120.00", repo.listarTodos().get(0).getValor());
     }
 
     @Test
-    @Order(4)
     void deveExcluir() {
-        repo.salvar(nova("Água", 60.00));
-        Despesa d = repo.listarTodos().get(0);
-        repo.excluir(d.getId());
+        repo.salvar(nova("Água", "60.00"));
+        repo.excluir(repo.listarTodos().get(0).getId());
         assertTrue(repo.listarTodos().isEmpty());
     }
 }

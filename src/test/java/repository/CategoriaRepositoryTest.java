@@ -85,7 +85,7 @@ class CategoriaRepositoryTest {
         Categoria moradia = repo.listarTodos().stream()
             .filter(c -> c.getNome().equals("Moradia")).findFirst().orElseThrow();
         new LancamentoFixoRepository().salvar(new model.LancamentoFixo(
-            model.LancamentoFixo.Tipo.DESPESA, "Aluguel", moradia.getId(), 1500.00, contaId, 10));
+            model.LancamentoFixo.Tipo.DESPESA, "Aluguel", moradia.getId(), new java.math.BigDecimal("1500.00"), contaId, 10));
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> repo.excluir(moradia.getId()));
         assertTrue(ex.getMessage().contains("lançamentos fixos"));
