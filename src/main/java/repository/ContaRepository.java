@@ -2,6 +2,7 @@ package repository;
 
 import db.DatabaseManager;
 import model.Conta;
+import model.Dinheiro;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -12,8 +13,8 @@ public class ContaRepository {
     public void salvar(Conta c) {
         verificarDuplicado(c.getNome(), null);
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement("INSERT INTO contas (nome) VALUES (?)")) {
-            ps.setString(1, c.getNome());
+             PreparedStatement ps = conn.prepareStatement("INSERT INTO contas (nome, saldo_inicial) VALUES (?,?)")) {
+            ps.setString(1, c.getNome()); ps.setDouble(2, c.getSaldoInicial().doubleValue());
             ps.executeUpdate();
         } catch (SQLException e) {
             if (e.getMessage().contains("UNIQUE"))
@@ -25,8 +26,8 @@ public class ContaRepository {
     public void atualizar(Conta c) {
         verificarDuplicado(c.getNome(), c.getId());
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement("UPDATE contas SET nome=? WHERE id=?")) {
-            ps.setString(1, c.getNome()); ps.setInt(2, c.getId());
+             PreparedStatement ps = conn.prepareStatement("UPDATE contas SET nome=?, saldo_inicial=? WHERE id=?")) {
+            ps.setString(1, c.getNome()); ps.setDouble(2, c.getSaldoInicial().doubleValue()); ps.setInt(3, c.getId());
             if (ps.executeUpdate() == 0) throw new RuntimeException("Conta não encontrada com ID " + c.getId());
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao atualizar conta: " + e.getMessage(), e);
@@ -37,7 +38,8 @@ public class ContaRepository {
         List<Conta> lista = new ArrayList<>();
         try (Connection conn = DatabaseManager.getConnection();
              ResultSet rs = conn.createStatement().executeQuery("SELECT * FROM contas ORDER BY nome")) {
-            while (rs.next()) lista.add(new Conta(rs.getInt("id"), rs.getString("nome")));
+            while (rs.next()) lista.add(new Conta(rs.getInt("id"), rs.getString("nome"),
+                    Dinheiro.de(rs.getDouble("saldo_inicial"))));
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao listar contas: " + e.getMessage(), e);
         }

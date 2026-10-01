@@ -24,6 +24,7 @@ public class ResumoView {
     private final Label lblInvestido = new Label("—");
     private final Label lblSaldo = new Label("—");
     private final TableView<ResumoMensal> tabela = Ui.tabela("Sem lançamentos no período.");
+    private final TableView<SaldoConta> tabelaContas = Ui.tabela("Sem lançamentos no período.");
     private final VBox divReceitas = new VBox(6);
     private final VBox divDespesas = new VBox(6);
     private final VBox divInvest = new VBox(6);
@@ -51,7 +52,7 @@ public class ResumoView {
         HBox cards = new HBox(16,
                 criarCardIndicador("% RENDA GASTA", lblGasto, Ui.COR_DESPESA),
                 criarCardIndicador("% RENDA INVESTIDA", lblInvestido, Ui.COR_INVESTIMENTO),
-                criarCardIndicador("SALDO EM CONTA", lblSaldo, Ui.COR_RECEITA));
+                criarCardIndicador("SALDO DO PERÍODO", lblSaldo, Ui.COR_RECEITA));
         cards.getChildren().forEach(c -> HBox.setHgrow(c, Priority.ALWAYS));
 
         Label lblTabela = new Label("Resumo Mês a Mês");
@@ -64,7 +65,11 @@ public class ResumoView {
         divisoes.getChildren().forEach(c -> HBox.setHgrow(c, Priority.ALWAYS));
 
         VBox.setVgrow(tabela, Priority.ALWAYS);
-        VBox root = new VBox(16, filtros, cards, lblTabela, tabela, lblDiv, divisoes);
+        Label lblContas = new Label("Movimento por Conta");
+        lblContas.getStyleClass().add("section-title");
+        configurarTabelaContas();
+
+        VBox root = new VBox(16, filtros, cards, lblTabela, tabela, lblContas, tabelaContas, lblDiv, divisoes);
         root.setPadding(new Insets(20));
         root.getStyleClass().add("main-content");
 
@@ -84,11 +89,24 @@ public class ResumoView {
                 .filter(ResumoMensal::temMovimento)
                 .toList();
         montarColunas(resumos);
+        List<SaldoConta> contas = cf.movimentoPorConta(ano, mes);
+        tabelaContas.getItems().setAll(contas);
+        tabelaContas.setPrefHeight(Math.max(90, 34 + contas.size() * 28));
         tabela.setItems(FXCollections.observableArrayList(resumos));
 
         atualizarDivisao(divReceitas, "Receitas por Origem", cf.divisaoReceitasPorOrigem(ano, mes), Ui.COR_RECEITA);
         atualizarDivisao(divDespesas, "Despesas por Categoria", cf.divisaoGastosPorCategoria(ano, mes), Ui.COR_DESPESA);
         atualizarDivisao(divInvest, "Investimentos por Tipo", cf.divisaoInvestimentosPorTipo(ano, mes), Ui.COR_INVESTIMENTO);
+    }
+
+    /** Receitas, despesas e investimentos de cada conta no período; resultado = receitas − despesas − investimentos. */
+    private void configurarTabelaContas() {
+        tabelaContas.setMinHeight(90);
+        tabelaContas.getColumns().add(Ui.colunaTexto("Conta", SaldoConta::getNome, 180));
+        tabelaContas.getColumns().add(Ui.colunaValor("Receitas", SaldoConta::receitas, 120, Ui.COR_RECEITA));
+        tabelaContas.getColumns().add(Ui.colunaValor("Despesas", SaldoConta::despesas, 120, Ui.COR_DESPESA));
+        tabelaContas.getColumns().add(Ui.colunaValor("Investimentos", SaldoConta::investimentos, 120, Ui.COR_INVESTIMENTO));
+        tabelaContas.getColumns().add(Ui.colunaValor("Resultado", SaldoConta::movimento, 130, null));
     }
 
     /** Colunas fixas + uma coluna por categoria que teve despesa no período mostrado. */

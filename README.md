@@ -6,7 +6,7 @@ Aplicativo desktop de controle financeiro pessoal em **Java 17 + JavaFX**, com d
 
 ## Funcionalidades
 
-- **Home**: perfil editável (nome e nascimento), saldo geral, receitas/despesas/saldo do mês atual, nível e XP, gráficos do mês e lançamentos fixos ativos
+- **Home**: perfil editável (nome e nascimento), saldo geral, receitas/despesas/saldo do mês atual, **saldo por conta**, nível e XP, gráficos do mês e lançamentos fixos ativos
 - **Cadastros**: todas as abas têm cadastro, **edição** (botão Editar ou duplo clique na linha) e exclusão com confirmação
   - **Receitas, Despesas e Investimentos**; despesas com filtro por categoria, mês e ano e total do filtro
   - **Importar CSV** (aba Despesas): importa extratos/faturas (ex: Nubank `date,title,amount`) com preview editável
@@ -16,10 +16,11 @@ Aplicativo desktop de controle financeiro pessoal em **Java 17 + JavaFX**, com d
     - **aprende** a categoria e o detalhe de cada descrição para as próximas importações
     - a gravação é feita numa única transação: ou importa tudo, ou nada
   - **Fixos**: lançamentos recorrentes (salário, aluguel, internet…) aplicados a um intervalo de meses sem duplicar
-  - **Categorias e Contas**
-- **Resumo**: % da renda gasta, % investida, saldo do período, tabela mês a mês com saldo acumulado e uma coluna por categoria, e divisão por origem, categoria e tipo
+  - **Categorias**
+  - **Contas**: com **saldo inicial** opcional (pode ser negativo) e tabela de saldo atual por conta
+- **Resumo**: % da renda gasta, % investida, saldo do período, tabela mês a mês com saldo acumulado e uma coluna por categoria, **movimento por conta** no período, e divisão por origem, categoria e tipo
 
-Regra de saldo usada em todo o app: **saldo = receitas − despesas − investimentos**.
+Regra de saldo usada em todo o app: **saldo = receitas − despesas − investimentos**. O saldo de cada conta soma o saldo inicial dela: **saldo da conta = saldo inicial + receitas − despesas − investimentos lançados nela** (o investimento conta como saída da conta). O saldo geral é a soma dos saldos das contas.
 
 Valores em dinheiro são calculados com `BigDecimal` (sem erros de arredondamento como `0,1 + 0,2 = 0,30000000000000004`).
 
@@ -134,6 +135,7 @@ As chaves estrangeiras são verificadas (`foreign_keys` ligado), então não é 
 | Versão | Mudança                                                                                   |
 |--------|-------------------------------------------------------------------------------------------|
 | 1      | Remove as colunas `mes`/`ano` de receitas, despesas e investimentos (derivadas da data) e as colunas de XP de `usuarios` (XP passou a ser calculado) |
+| 2      | Adiciona `saldo_inicial` em `contas` (zero para as contas existentes)                     |
 
 Depois de migrado, o banco não abre mais em versões antigas do app — use o backup se precisar voltar.
 

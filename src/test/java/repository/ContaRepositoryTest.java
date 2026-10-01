@@ -53,6 +53,18 @@ class ContaRepositoryTest {
     }
 
     @Test
+    @Order(6)
+    void deveGuardarEAtualizarSaldoInicialInclusiveNegativo() {
+        repo.salvar(new Conta(0, "Itaú", new java.math.BigDecimal("1250.50")));
+        Conta conta = repo.listarTodos().get(0);
+        assertEquals(new java.math.BigDecimal("1250.50"), conta.getSaldoInicial());
+
+        repo.atualizar(new Conta(conta.getId(), "Itaú", new java.math.BigDecimal("-300")));
+        assertEquals(new java.math.BigDecimal("-300.00"), repo.listarTodos().get(0).getSaldoInicial());
+        assertEquals(new java.math.BigDecimal("0.00"), new Conta("X").getSaldoInicial());
+    }
+
+    @Test
     @Order(5)
     void deveExcluirContaSemVinculos() {
         repo.salvar(new Conta("Para Excluir"));

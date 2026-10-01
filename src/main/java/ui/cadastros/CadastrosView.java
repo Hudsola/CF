@@ -21,7 +21,7 @@ public class CadastrosView {
         adicionar(tabs, "Investimentos", new AbaInvestimentos(cf));
         adicionar(tabs, "Fixos", new AbaFixos(cf));
         adicionar(tabs, "Categorias", AbaNomes.categorias(cf));
-        adicionar(tabs, "Contas", AbaNomes.contas(cf));
+        adicionar(tabs, "Contas", new AbaContas(cf));
 
         VBox root = new VBox(tabs);
         root.getStyleClass().add("main-content");

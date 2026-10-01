@@ -21,7 +21,7 @@ public class DatabaseManager {
     private static Path arquivoPadrao = null;
 
     /** Versão do esquema gravada em PRAGMA user_version. Suba ao criar uma nova migração. */
-    static final int VERSAO_ESQUEMA = 1;
+    static final int VERSAO_ESQUEMA = 2;
 
     /** Permite injetar URL customizada (ex: :memory: para testes). */
     public static void setUrl(String url) { customUrl = url; }
@@ -93,7 +93,8 @@ public class DatabaseManager {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS contas (
                     id   INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nome TEXT NOT NULL UNIQUE COLLATE NOCASE
+                    nome TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                    saldo_inicial REAL NOT NULL DEFAULT 0
                 )
             """);
 
@@ -196,10 +197,11 @@ public class DatabaseManager {
         }
         if (versao >= VERSAO_ESQUEMA) return;
 
-        boolean precisaAlterar = versao < 1 && (
+        boolean alteraV1 = versao < 1 && (
                 temColuna(conn, "receitas", "mes") || temColuna(conn, "despesas", "mes")
                 || temColuna(conn, "investimentos", "mes") || temColuna(conn, "usuarios", "xp"));
-        if (precisaAlterar) fazerBackup(versao);
+        boolean alteraV2 = versao < 2 && !temColuna(conn, "contas", "saldo_inicial");
+        if (alteraV1 || alteraV2) fazerBackup(versao);
 
         conn.setAutoCommit(false);
         try (Statement stmt = conn.createStatement()) {
@@ -211,6 +213,10 @@ public class DatabaseManager {
                 }
                 for (String coluna : List.of("nivel", "xp", "xp_proximo_nivel"))
                     removerColuna(stmt, conn, "usuarios", coluna);
+            }
+            if (alteraV2) {
+                // v2: saldo inicial de cada conta, para o saldo por conta bater com o do banco.
+                stmt.execute("ALTER TABLE contas ADD COLUMN saldo_inicial REAL NOT NULL DEFAULT 0");
             }
             stmt.execute("PRAGMA user_version = " + VERSAO_ESQUEMA);
             conn.commit();

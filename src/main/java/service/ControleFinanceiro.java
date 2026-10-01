@@ -174,11 +174,43 @@ public class ControleFinanceiro {
                 somar(investRepo.listarPorPeriodo(p), Investimento::getValor));
     }
 
-    /** Saldo de todo o histórico: receitas − despesas − investimentos. */
+    /** Saldo geral: soma dos saldos de todas as contas (saldos iniciais + todos os lançamentos). */
     public BigDecimal saldoTotal() {
-        return somar(getReceitas(), Receita::getValor)
-                .subtract(somar(getDespesas(), Despesa::getValor))
-                .subtract(somar(getInvestimentos(), Investimento::getValor));
+        return saldosPorConta().stream().map(SaldoConta::saldo).reduce(Dinheiro.ZERO, BigDecimal::add);
+    }
+
+    /** Saldo atual de cada conta: saldo inicial + receitas − despesas − investimentos de todo o histórico. */
+    public List<SaldoConta> saldosPorConta() {
+        return montarSaldos(getReceitas(), getDespesas(), getInvestimentos(), true);
+    }
+
+    /** Movimento de cada conta no ano (ou mês) — sem saldo inicial; contas sem lançamentos no período ficam de fora. */
+    public List<SaldoConta> movimentoPorConta(int ano, String mes) {
+        Periodo p = Periodo.de(ano, mes);
+        return montarSaldos(receitaRepo.listarPorPeriodo(p), despesaRepo.listarPorPeriodo(p),
+                investRepo.listarPorPeriodo(p), false).stream()
+                .filter(s -> s.receitas().signum() != 0 || s.despesas().signum() != 0 || s.investimentos().signum() != 0)
+                .toList();
+    }
+
+    private List<SaldoConta> montarSaldos(List<Receita> receitas, List<Despesa> despesas,
+                                          List<Investimento> investimentos, boolean comSaldoInicial) {
+        Map<Integer, BigDecimal> rec = somarPorConta(receitas, Receita::getContaId, Receita::getValor);
+        Map<Integer, BigDecimal> desp = somarPorConta(despesas, Despesa::getContaId, Despesa::getValor);
+        Map<Integer, BigDecimal> inv = somarPorConta(investimentos, Investimento::getContaId, Investimento::getValor);
+        return getContas().stream().map(c -> new SaldoConta(c,
+                        comSaldoInicial ? c.getSaldoInicial() : Dinheiro.ZERO,
+                        rec.getOrDefault(c.getId(), Dinheiro.ZERO),
+                        desp.getOrDefault(c.getId(), Dinheiro.ZERO),
+                        inv.getOrDefault(c.getId(), Dinheiro.ZERO)))
+                .toList();
+    }
+
+    private static <T> Map<Integer, BigDecimal> somarPorConta(List<T> itens, Function<T, Integer> conta,
+                                                             Function<T, BigDecimal> valor) {
+        Map<Integer, BigDecimal> r = new HashMap<>();
+        for (T t : itens) r.merge(conta.apply(t), valor.apply(t), BigDecimal::add);
+        return r;
     }
 
     public Map<String, BigDecimal> divisaoReceitasPorOrigem(int ano, String mes) {

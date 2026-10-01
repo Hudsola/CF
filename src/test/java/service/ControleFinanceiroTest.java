@@ -117,6 +117,43 @@ class ControleFinanceiroTest {
         assertValor("3500.00", cf.saldoTotal());
     }
 
+    // --- Saldo por conta ---
+
+    @Test
+    void deveCalcularSaldoPorContaComSaldoInicial() {
+        cf.salvarConta(new Conta(0, "Itaú", v("1000.00")));
+        int itau = cf.getContas().stream().filter(c -> c.getNome().equals("Itaú")).findFirst().orElseThrow().getId();
+
+        receita("Salário", "5000.00", LocalDate.of(2025, 6, 5));                       // Nubank
+        despesa("Aluguel", "1500.00", LocalDate.of(2025, 6, 10));                     // Nubank
+        cf.salvarDespesa(new Despesa(catId, "Condomínio", v("300.00"), itau, LocalDate.of(2025, 6, 10)));
+        cf.salvarInvestimento(new Investimento("CDB", v("200.00"), itau, LocalDate.of(2025, 7, 1)));
+
+        List<SaldoConta> saldos = cf.saldosPorConta();     // ordenado por nome: Itaú, Nubank
+        SaldoConta s1 = saldos.get(0), s2 = saldos.get(1);
+        assertEquals("Itaú", s1.getNome());
+        assertValor("1000.00", s1.saldoInicial());
+        assertValor("300.00", s1.despesas());
+        assertValor("200.00", s1.investimentos());
+        assertValor("500.00", s1.saldo());              // 1000 − 300 − 200
+        assertValor("3500.00", s2.saldo());             // 5000 − 1500
+        assertValor("4000.00", cf.saldoTotal());        // soma das contas, com o saldo inicial
+    }
+
+    @Test
+    void movimentoPorContaDeveConsiderarSoOPeriodoESemSaldoInicial() {
+        cf.salvarConta(new Conta(0, "Itaú", v("1000.00")));
+        receita("Salário", "5000.00", LocalDate.of(2025, 6, 5));
+        despesa("Aluguel", "1500.00", LocalDate.of(2025, 7, 10));
+
+        List<SaldoConta> junho = cf.movimentoPorConta(2025, "JUNHO");
+        assertEquals(1, junho.size(), "conta sem lançamentos no período fica de fora");
+        assertEquals("Nubank", junho.get(0).getNome());
+        assertValor("0", junho.get(0).saldoInicial());
+        assertValor("5000.00", junho.get(0).movimento());
+        assertValor("3500.00", cf.movimentoPorConta(2025, "Todos").get(0).movimento());
+    }
+
     // --- Resumo anual ---
 
     @Test

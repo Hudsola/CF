@@ -66,6 +66,7 @@ class MigracaoTest {
             assertFalse(colunas(arquivo, t).contains("ano"), t);
         }
         assertEquals(List.of("id", "nome", "data_nascimento"), colunas(arquivo, "usuarios"));
+        assertEquals(List.of("id", "nome", "saldo_inicial"), colunas(arquivo, "contas"));
 
         var receita = new ReceitaRepository().listarTodos().get(0);
         assertEquals("Salário", receita.getOrigem());
@@ -93,6 +94,27 @@ class MigracaoTest {
             assertEquals(1, arquivos.filter(p -> p.getFileName().toString().contains("-backup-")).count());
         }
         assertEquals(1, new ReceitaRepository().listarTodos().size());
+    }
+
+    @Test
+    void deveMigrarDaVersao1ParaAVersao2AdicionandoSaldoInicialZerado() throws Exception {
+        Path arquivo = dir.resolve("controle_financeiro.db");
+        try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + arquivo);
+             Statement s = c.createStatement()) {
+            s.execute("CREATE TABLE contas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE COLLATE NOCASE)");
+            s.execute("INSERT INTO contas (nome) VALUES ('Nubank')");
+            s.execute("PRAGMA user_version = 1");
+        }
+        DatabaseManager.setUrl("jdbc:sqlite:" + arquivo);
+
+        DatabaseManager.inicializar();
+
+        var contas = new repository.ContaRepository().listarTodos();
+        assertEquals(1, contas.size());
+        assertEquals(new java.math.BigDecimal("0.00"), contas.get(0).getSaldoInicial());
+        try (Stream<Path> arquivos = Files.list(dir)) {
+            assertEquals(1, arquivos.filter(p -> p.getFileName().toString().startsWith("controle_financeiro-backup-v1-")).count());
+        }
     }
 
     @Test

@@ -30,6 +30,7 @@ public class HomeView {
         root.getStyleClass().add("main-content");
         root.getChildren().addAll(
                 criarLinhaCards(mes),
+                criarBlocoSaldosPorConta(),
                 criarBlocoXP(),
                 criarLinhaGraficos(),
                 criarBlocoFixos());
@@ -79,7 +80,7 @@ public class HomeView {
         Label lblIdade = new Label(usuario.getIdade() > 0 ? usuario.getIdade() + " anos" : "Idade não informada");
         lblIdade.getStyleClass().add("card-stat-label");
 
-        Label lblSaldoLabel = new Label("SALDO GERAL");
+        Label lblSaldoLabel = new Label("SALDO GERAL (TODAS AS CONTAS)");
         lblSaldoLabel.getStyleClass().add("card-stat-label");
         Label lblSaldo = new Label(Dinheiro.formatar(saldo));
         lblSaldo.getStyleClass().add("card-stat-value");
@@ -173,6 +174,31 @@ public class HomeView {
         DonutChart d = new DonutChart(titulo, dados, Dinheiro.formatar(total));
         d.getStyleClass().add("chart-block");
         return d;
+    }
+
+    // -------------------------------------------------------------------------
+    // Saldo por conta
+    // -------------------------------------------------------------------------
+
+    private VBox criarBlocoSaldosPorConta() {
+        Label titulo = new Label("Saldo por Conta");
+        titulo.getStyleClass().add("section-title");
+
+        TableView<SaldoConta> tabela = Ui.tabela("Nenhuma conta cadastrada.");
+        tabela.getColumns().add(Ui.colunaTexto("Conta", SaldoConta::getNome, 180));
+        tabela.getColumns().add(Ui.colunaValor("Saldo inicial", SaldoConta::saldoInicial, 120, null));
+        tabela.getColumns().add(Ui.colunaValor("Receitas", SaldoConta::receitas, 120, Ui.COR_RECEITA));
+        tabela.getColumns().add(Ui.colunaValor("Despesas", SaldoConta::despesas, 120, Ui.COR_DESPESA));
+        tabela.getColumns().add(Ui.colunaValor("Investimentos", SaldoConta::investimentos, 120, Ui.COR_INVESTIMENTO));
+        tabela.getColumns().add(Ui.colunaValor("Saldo atual", SaldoConta::saldo, 130, null));
+        List<SaldoConta> saldos = cf.saldosPorConta();
+        tabela.getItems().setAll(saldos);
+        tabela.setPrefHeight(Math.max(90, 34 + saldos.size() * 28));
+
+        VBox bloco = new VBox(10, titulo, tabela);
+        bloco.getStyleClass().add("fixos-block");
+        bloco.setPadding(new Insets(16));
+        return bloco;
     }
 
     // -------------------------------------------------------------------------
