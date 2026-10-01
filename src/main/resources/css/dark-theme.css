@@ -33,6 +33,11 @@
     -fx-background-color: #1e1e1e;
 }
 
+.navbar-info {
+    -fx-text-fill: #666666;
+    -fx-font-size: 11px;
+}
+
 .nav-button-active {
     -fx-text-fill: #E8A838;
     -fx-border-color: transparent transparent #E8A838 transparent;

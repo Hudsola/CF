@@ -65,7 +65,18 @@ src/test/java/    testes de migração, repositórios e serviço (banco temporá
 
 ---
 
-## Como executar
+## Instalar e usar (Windows)
+
+1. Em [Actions](https://github.com/Hudsola/CF/actions), abra a execução mais recente do branch `main` e baixe o artefato **executavel-Windows** (precisa estar logado no GitHub; os artefatos expiram em 30 dias).
+2. Descompacte e rode `ControleFinanceiro-<versão>.exe`. A instalação é feita na sua pasta de usuário, **sem pedir senha de administrador**, e cria atalhos na área de trabalho e no menu Iniciar.
+3. Como o instalador não tem assinatura digital, o Windows pode mostrar "O Windows protegeu o computador": clique em **Mais informações → Executar assim mesmo**.
+4. Para atualizar, basta instalar a versão nova por cima: ela substitui a anterior e **seus dados são mantidos** (ficam fora da pasta do programa, veja [Banco de dados](#banco-de-dados)).
+
+Os mesmos artefatos trazem o `.deb` (Linux) e o `.dmg` (macOS).
+
+---
+
+## Executar a partir do código
 
 Pré-requisitos: **JDK 17+** e **Maven 3.8+**.
 
@@ -75,22 +86,34 @@ mvn javafx:run
 
 # Ou gerar o JAR executável e rodar
 mvn package
-java -jar target/controle-financeiro-1.0.0.jar
+java -jar target/controle-financeiro-<versão>.jar
 ```
 
-O JAR gerado só traz os componentes nativos do JavaFX do sistema onde foi compilado. Para usar em outro sistema, compile nele ou use o instalador gerado pelo CI.
+O JAR gerado só traz os componentes nativos do JavaFX do sistema onde foi compilado. Para usar em outro sistema, compile nele ou use o instalador.
 
-Instalador Windows (`.exe`) local, exige o [WiX Toolset](https://wixtoolset.org):
+### Gerar o instalador localmente
 
 ```bash
-mvn package -Pexe
+mvn clean package -Pinstalador
 ```
+
+O instalador sai em `target/dist`: `.exe` no Windows (exige o [WiX Toolset 3](https://github.com/wixtoolset/wix3/releases) instalado), `.deb` no Linux e `.dmg` no macOS. Sem o WiX, dá para gerar a versão portátil (pasta com `ControleFinanceiro.exe`, sem instalação):
+
+```bash
+mvn clean package -Pinstalador -Djpackage.tipo=app-image "-Djpackage.args.so="
+```
+
+Ao lançar uma versão nova, suba a `<version>` no `pom.xml` (ela vira a versão do instalador). Não altere o `--win-upgrade-uuid` do perfil `so-windows`: é ele que faz a versão nova substituir a antiga.
 
 ---
 
 ## Banco de dados
 
-O arquivo `controle_financeiro.db` é criado na pasta onde o app é executado. Ele contém seus dados pessoais e **não é versionado** (está no `.gitignore`). Faça backup copiando esse arquivo.
+O banco fica em **`<pasta do usuário>/ControleFinanceiro/controle_financeiro.db`** (no Windows, `C:\Users\<você>\ControleFinanceiro\`), seja rodando pelo instalador, pelo JAR ou pela IDE. O caminho aparece no canto superior direito do app, com um botão **Abrir pasta**. Na primeira execução, se essa pasta ainda não tiver banco e existir um `controle_financeiro.db` na pasta atual (versões antigas gravavam ali), ele é **copiado** para lá; o original não é apagado.
+
+Para guardar os dados em outro lugar, defina a variável de ambiente `CONTROLE_FINANCEIRO_PASTA` com a pasta desejada.
+
+O arquivo contém seus dados pessoais e **não é versionado** (está no `.gitignore`). Faça backup copiando esse arquivo.
 
 | Tabela                  | Descrição                                          |
 |-------------------------|----------------------------------------------------|

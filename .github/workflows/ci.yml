@@ -90,50 +90,14 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build do JAR
-        run: mvn package -DskipTests --no-transfer-progress
-
-      - name: Empacotar com jpackage (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          jpackage \
-            --input target \
-            --main-jar controle-financeiro-1.0.0.jar \
-            --main-class ui.Launcher \
-            --name "ControleFinanceiro" \
-            --app-version 1.0.0 \
-            --type deb \
-            --dest dist
-
-      - name: Empacotar com jpackage (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          jpackage `
-            --input target `
-            --main-jar controle-financeiro-1.0.0.jar `
-            --main-class ui.Launcher `
-            --name "ControleFinanceiro" `
-            --app-version 1.0.0 `
-            --type exe `
-            --win-shortcut `
-            --win-menu `
-            --dest dist
-
-      - name: Empacotar com jpackage (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          jpackage \
-            --input target \
-            --main-jar controle-financeiro-1.0.0.jar \
-            --main-class ui.Launcher \
-            --name "ControleFinanceiro" \
-            --app-version 1.0.0 \
-            --type dmg \
-            --dest dist
+      # Mesmo comando usado localmente (perfil "instalador" do pom.xml): gera .exe, .deb ou .dmg
+      # conforme o sistema do runner. O runner Windows do GitHub já vem com o WiX Toolset.
+      - name: Gerar instalador (jpackage)
+        run: mvn clean package -Pinstalador -DskipTests --no-transfer-progress
 
       - name: Upload do executável nativo
         uses: actions/upload-artifact@v4
         with:
           name: executavel-${{ runner.os }}
-          path: dist/
+          path: target/dist/
           retention-days: 30

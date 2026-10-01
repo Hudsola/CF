@@ -3,6 +3,7 @@ package ui;
 import db.DatabaseManager;
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import ui.components.NavBar;
@@ -12,11 +13,22 @@ public class App extends Application {
 
     private static Stage primaryStage;
     private static BorderPane root;
+    private static App instancia;
 
     @Override
     public void start(Stage stage) {
+        instancia = this;
         primaryStage = stage;
-        DatabaseManager.inicializar();
+        try {
+            DatabaseManager.inicializar();
+        } catch (RuntimeException e) {
+            Alert alerta = new Alert(Alert.AlertType.ERROR,
+                    e.getMessage() + "\n\nBanco: " + DatabaseManager.arquivoBanco());
+            alerta.setTitle("Controle Financeiro");
+            alerta.setHeaderText("Não foi possível abrir o banco de dados");
+            alerta.showAndWait();
+            throw e;
+        }
 
         root = new BorderPane();
         NavBar navBar = new NavBar();
@@ -41,6 +53,11 @@ public class App extends Application {
             case "cadastros" -> root.setCenter(new ui.cadastros.CadastrosView().getView());
             case "resumo"    -> root.setCenter(new ui.resumo.ResumoView().getView());
         }
+    }
+
+    /** Abre um arquivo ou pasta no programa padrão do sistema (no Windows, o Explorer para pastas). */
+    public static void abrirNoSistema(java.nio.file.Path caminho) {
+        if (instancia != null) instancia.getHostServices().showDocument(caminho.toUri().toString());
     }
 
     public static Stage getStage() { return primaryStage; }

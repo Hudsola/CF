@@ -12,8 +12,13 @@ import java.util.Properties;
 
 public class DatabaseManager {
 
-    private static final String URL = "jdbc:sqlite:controle_financeiro.db";
+    static final String NOME_ARQUIVO = "controle_financeiro.db";
+
+    /** Variável de ambiente que troca a pasta dos dados (útil para testes ou para guardar em outro disco). */
+    static final String VARIAVEL_PASTA = "CONTROLE_FINANCEIRO_PASTA";
+
     private static String customUrl = null;
+    private static Path arquivoPadrao = null;
 
     /** Versão do esquema gravada em PRAGMA user_version. Suba ao criar uma nova migração. */
     static final int VERSAO_ESQUEMA = 1;
@@ -21,7 +26,44 @@ public class DatabaseManager {
     /** Permite injetar URL customizada (ex: :memory: para testes). */
     public static void setUrl(String url) { customUrl = url; }
 
-    private static String url() { return customUrl != null ? customUrl : URL; }
+    private static String url() {
+        return customUrl != null ? customUrl : "jdbc:sqlite:" + arquivoBanco();
+    }
+
+    /**
+     * Arquivo do banco em uso: {@code <pasta do usuário>/ControleFinanceiro/controle_financeiro.db}.
+     *
+     * Fica fora da pasta do programa porque, instalado, o app não pode gravar em "Arquivos de Programas",
+     * e assim os dados são os mesmos rodando pelo instalador, pelo JAR ou pela IDE.
+     */
+    public static synchronized Path arquivoBanco() {
+        if (customUrl != null) return Path.of(customUrl.replaceFirst("^jdbc:sqlite:", "")).toAbsolutePath();
+        if (arquivoPadrao == null) {
+            String env = System.getenv(VARIAVEL_PASTA);
+            Path pasta = env != null && !env.isBlank()
+                    ? Path.of(env)
+                    : Path.of(System.getProperty("user.home"), "ControleFinanceiro");
+            arquivoPadrao = prepararArquivo(pasta, Path.of("").toAbsolutePath());
+        }
+        return arquivoPadrao;
+    }
+
+    /**
+     * Garante a pasta de dados e devolve o caminho do banco nela. Se ainda não houver banco lá, mas existir
+     * um {@value #NOME_ARQUIVO} na pasta atual (versões antigas gravavam ali), copia-o — o original fica intacto.
+     */
+    static Path prepararArquivo(Path pastaDados, Path pastaAtual) {
+        Path destino = pastaDados.resolve(NOME_ARQUIVO).toAbsolutePath();
+        try {
+            Files.createDirectories(pastaDados);
+            Path antigo = pastaAtual.resolve(NOME_ARQUIVO).toAbsolutePath();
+            if (!Files.exists(destino) && Files.exists(antigo) && !antigo.equals(destino))
+                Files.copy(antigo, destino, StandardCopyOption.COPY_ATTRIBUTES);
+        } catch (IOException e) {
+            throw new RuntimeException("Não foi possível preparar a pasta de dados " + pastaDados + ": " + e.getMessage(), e);
+        }
+        return destino;
+    }
 
     public static Connection getConnection() throws SQLException {
         // O SQLite só respeita os REFERENCES das tabelas com foreign_keys ligado em cada conexão.

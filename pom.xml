@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.controlefinanceiro</groupId>
     <artifactId>controle-financeiro</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <packaging>jar</packaging>
     <name>Controle Financeiro Pessoal</name>
     <description>Sistema de controle financeiro pessoal com JavaFX e SQLite</description>
@@ -156,43 +156,86 @@
         </plugins>
     </build>
     <profiles>
+        <!--
+            Instalador nativo com jpackage:  mvn clean package -Pinstalador
+            Gera em target/dist um .exe (Windows), .deb (Linux) ou .dmg (macOS), conforme o sistema
+            onde o comando roda. No Windows é preciso ter o WiX Toolset 3 instalado.
+        -->
         <profile>
-            <id>exe</id>
+            <id>instalador</id>
             <build>
                 <plugins>
+                    <!-- jpackage empacota a pasta inteira: copia só o JAR final para uma pasta própria -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copiar-jar-para-instalador</id>
+                                <phase>package</phase>
+                                <goals><goal>copy-resources</goal></goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/jpackage-input</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${project.build.directory}</directory>
+                                            <includes><include>${project.build.finalName}.jar</include></includes>
+                                            <filtering>false</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
                         <version>3.1.0</version>
                         <executions>
                             <execution>
-                                <id>create-executable</id>
+                                <id>jpackage</id>
                                 <phase>package</phase>
-                                <goals>
-                                    <goal>exec</goal>
-                                </goals>
+                                <goals><goal>exec</goal></goals>
                                 <configuration>
                                     <executable>jpackage</executable>
-                                    <arguments>
-                                        <argument>--type</argument>
-                                        <argument>exe</argument>
-                                        <argument>--input</argument>
-                                        <argument>${project.build.directory}</argument>
-                                        <argument>--name</argument>
-                                        <argument>ControleFinanceiro</argument>
-                                        <argument>--main-jar</argument>
-                                        <argument>${project.build.finalName}.jar</argument>
-                                        <argument>--main-class</argument>
-                                        <argument>${main.class}</argument>
-                                        <argument>--win-dir-chooser</argument>
-                                        <argument>--win-shortcut</argument>
-                                    </arguments>
+                                    <commandlineArgs>--type ${jpackage.tipo} --input ${project.build.directory}/jpackage-input --dest ${project.build.directory}/dist --name ControleFinanceiro --app-version ${project.version} --vendor Hudsola --description "Controle financeiro pessoal" --main-jar ${project.build.finalName}.jar --main-class ${main.class} ${jpackage.args.so}</commandlineArgs>
                                 </configuration>
                             </execution>
                         </executions>
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+
+        <!-- Opções do jpackage por sistema operacional (ativadas automaticamente) -->
+        <profile>
+            <id>so-windows</id>
+            <activation><os><family>windows</family></os></activation>
+            <properties>
+                <jpackage.tipo>exe</jpackage.tipo>
+                <!--
+                    per-user-install: instala na pasta do usuário, sem pedir senha de administrador.
+                    upgrade-uuid: identificador FIXO do produto; com ele, instalar uma versão nova
+                    substitui a anterior em vez de duplicar. Nunca altere esse valor.
+                -->
+                <jpackage.args.so>--win-per-user-install --win-dir-chooser --win-shortcut --win-menu --win-menu-group ControleFinanceiro --win-upgrade-uuid 89538236-735b-49d8-beb2-622656fba504</jpackage.args.so>
+            </properties>
+        </profile>
+        <profile>
+            <id>so-linux</id>
+            <activation><os><name>Linux</name></os></activation>
+            <properties>
+                <jpackage.tipo>deb</jpackage.tipo>
+                <jpackage.args.so>--linux-shortcut --linux-menu-group Office --linux-app-category office</jpackage.args.so>
+            </properties>
+        </profile>
+        <profile>
+            <id>so-mac</id>
+            <activation><os><family>mac</family></os></activation>
+            <properties>
+                <jpackage.tipo>dmg</jpackage.tipo>
+                <jpackage.args.so>--mac-package-name ControleFinanceiro</jpackage.args.so>
+            </properties>
         </profile>
     </profiles>
 </project>
