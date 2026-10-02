@@ -11,13 +11,17 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class LancamentoFixoRepositoryTest {
 
-    private final LancamentoFixoRepository repo      = new LancamentoFixoRepository();
-    private final ContaRepository          contaRepo = new ContaRepository();
+    private int usuarioId;
+
+    private LancamentoFixoRepository repo;
+    private ContaRepository          contaRepo;
     private int contaId;
 
     @BeforeEach
     void setUp() {
-        DatabaseTestHelper.setup();
+        usuarioId = DatabaseTestHelper.setup();
+        repo = new LancamentoFixoRepository(usuarioId);
+        contaRepo = new ContaRepository(usuarioId);
         contaRepo.salvar(new Conta("Nubank"));
         contaId = contaRepo.listarTodos().get(0).getId();
     }

@@ -48,12 +48,14 @@ class AbaFixos extends AbaCrud<LancamentoFixo> {
         Button btnAlternar = new Button("Ativar/Desativar");
         btnAlternar.getStyleClass().add("btn-secondary");
         btnAlternar.setOnAction(e -> {
-            LancamentoFixo sel = selecionado();
-            if (sel == null) { erro("Selecione um lançamento fixo."); return; }
+            List<LancamentoFixo> sel = selecionados();
+            if (sel.isEmpty()) { erro("Selecione um ou mais lançamentos fixos."); return; }
             try {
-                cf.alternarAtivoFixo(sel.getId());
+                for (LancamentoFixo lf : sel) cf.alternarAtivoFixo(lf.getId());
                 recarregarTabela();
-                sucesso("\"" + sel.getDescricao() + "\" " + (sel.isAtivo() ? "desativado." : "ativado."));
+                sucesso(sel.size() == 1
+                        ? "\"" + sel.get(0).getDescricao() + "\" " + (sel.get(0).isAtivo() ? "desativado." : "ativado.")
+                        : sel.size() + " lançamentos fixos ativados/desativados.");
             } catch (Exception ex) { erro(ex.getMessage()); }
         });
 
@@ -151,4 +153,5 @@ class AbaFixos extends AbaCrud<LancamentoFixo> {
     @Override protected void salvarAlteracao(LancamentoFixo o) { cf.atualizarLancamentoFixo(lerFormulario(o.getId(), o.isAtivo())); }
     @Override protected void excluir(LancamentoFixo lf) { cf.excluirLancamentoFixo(lf.getId()); }
     @Override protected String descrever(LancamentoFixo lf) { return "o lançamento fixo \"" + lf.getDescricao() + "\""; }
+    @Override protected String descreverVarios(List<LancamentoFixo> itens) { return "os " + itens.size() + " lançamentos fixos selecionados"; }
 }

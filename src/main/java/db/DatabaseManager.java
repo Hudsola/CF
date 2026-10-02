@@ -21,7 +21,7 @@ public class DatabaseManager {
     private static Path arquivoPadrao = null;
 
     /** Versão do esquema gravada em PRAGMA user_version. Suba ao criar uma nova migração. */
-    static final int VERSAO_ESQUEMA = 2;
+    static final int VERSAO_ESQUEMA = 3;
 
     /** Permite injetar URL customizada (ex: :memory: para testes). */
     public static void setUrl(String url) { customUrl = url; }
@@ -46,6 +46,11 @@ public class DatabaseManager {
             arquivoPadrao = prepararArquivo(pasta, Path.of("").toAbsolutePath());
         }
         return arquivoPadrao;
+    }
+
+    /** Pasta onde ficam o banco e os arquivos de configuração (ex: google-oauth.json). */
+    public static Path pastaDados() {
+        return arquivoBanco().getParent();
     }
 
     /**
@@ -75,26 +80,37 @@ public class DatabaseManager {
     public static void inicializar() {
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
 
+            // Bancos novos já nascem na estrutura atual; bancos existentes são ajustados em migrar().
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS usuarios (
                     id               INTEGER PRIMARY KEY AUTOINCREMENT,
                     nome             TEXT    NOT NULL,
-                    data_nascimento  TEXT
+                    data_nascimento  TEXT,
+                    usuario          TEXT    COLLATE NOCASE,
+                    email            TEXT    COLLATE NOCASE,
+                    senha_hash       TEXT,
+                    google_id        TEXT,
+                    criado_em        TEXT,
+                    ultimo_login     TEXT
                 )
             """);
 
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS categorias (
-                    id   INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nome TEXT NOT NULL UNIQUE COLLATE NOCASE
+                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+                    nome       TEXT    NOT NULL COLLATE NOCASE,
+                    UNIQUE(usuario_id, nome)
                 )
             """);
 
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS contas (
-                    id   INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nome TEXT NOT NULL UNIQUE COLLATE NOCASE,
-                    saldo_inicial REAL NOT NULL DEFAULT 0
+                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                    usuario_id    INTEGER NOT NULL REFERENCES usuarios(id),
+                    nome          TEXT    NOT NULL COLLATE NOCASE,
+                    saldo_inicial REAL    NOT NULL DEFAULT 0,
+                    UNIQUE(usuario_id, nome)
                 )
             """);
 
@@ -155,27 +171,27 @@ public class DatabaseManager {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS mapeamentos_descricao (
                     id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                    padrao        TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+                    usuario_id    INTEGER NOT NULL REFERENCES usuarios(id),
+                    padrao        TEXT    NOT NULL COLLATE NOCASE,
                     categoria_id  INTEGER NOT NULL REFERENCES categorias(id),
-                    detalhe       TEXT    NOT NULL )
+                    detalhe       TEXT    NOT NULL,
+                    UNIQUE(usuario_id, padrao)
+                )
             """);
 
             migrar(conn);
 
+            // Login: usuário, e-mail e conta Google não podem se repetir (vários NULL são permitidos).
+            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_usuario ON usuarios(usuario)");
+            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_email ON usuarios(email)");
+            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_google ON usuarios(google_id)");
+
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_contas_usuario ON contas(usuario_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_categorias_usuario ON categorias(usuario_id)");
             // Consultas por período filtram pela data (texto ISO aaaa-mm-dd).
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_receitas_data ON receitas(data)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_despesas_data ON despesas(data)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_investimentos_data ON investimentos(data)");
-
-            // Categorias padrão
-            stmt.execute("""
-                INSERT OR IGNORE INTO categorias (nome) VALUES
-                    ('Alimentação'),('Moradia'),('Educação'),('Pet'),
-                    ('Saúde'),('Transporte'),('Pessoais'),('Lazer'),('Financeiros')
-            """);
-
-            // Usuário padrão (se não existir)
-            stmt.execute("INSERT OR IGNORE INTO usuarios (id, nome) VALUES (1, 'Usuário')");
 
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao inicializar banco: " + e.getMessage(), e);
@@ -189,6 +205,7 @@ public class DatabaseManager {
     /**
      * Atualiza bancos criados por versões anteriores do app. Antes de alterar o esquema, copia o
      * arquivo do banco para "controle_financeiro-backup-v{versão}-{data}.db" na mesma pasta.
+     * Se qualquer passo falhar, nada é alterado.
      */
     private static void migrar(Connection conn) throws SQLException {
         int versao;
@@ -201,8 +218,12 @@ public class DatabaseManager {
                 temColuna(conn, "receitas", "mes") || temColuna(conn, "despesas", "mes")
                 || temColuna(conn, "investimentos", "mes") || temColuna(conn, "usuarios", "xp"));
         boolean alteraV2 = versao < 2 && !temColuna(conn, "contas", "saldo_inicial");
-        if (alteraV1 || alteraV2) fazerBackup(versao);
+        boolean alteraV3 = versao < 3 && !temColuna(conn, "contas", "usuario_id");
+        if (alteraV1 || alteraV2 || alteraV3) fazerBackup(versao);
 
+        // Recriar tabelas referenciadas por outras (contas, categorias) exige desligar a checagem de
+        // chaves estrangeiras durante a troca; ela é refeita com PRAGMA foreign_key_check antes do commit.
+        try (Statement s = conn.createStatement()) { s.execute("PRAGMA foreign_keys = OFF"); }
         conn.setAutoCommit(false);
         try (Statement stmt = conn.createStatement()) {
             if (versao < 1) {
@@ -218,6 +239,12 @@ public class DatabaseManager {
                 // v2: saldo inicial de cada conta, para o saldo por conta bater com o do banco.
                 stmt.execute("ALTER TABLE contas ADD COLUMN saldo_inicial REAL NOT NULL DEFAULT 0");
             }
+            if (alteraV3) migrarParaV3(stmt, conn);
+
+            try (ResultSet rs = stmt.executeQuery("PRAGMA foreign_key_check")) {
+                if (rs.next())
+                    throw new SQLException("referência inválida na tabela " + rs.getString("table"));
+            }
             stmt.execute("PRAGMA user_version = " + VERSAO_ESQUEMA);
             conn.commit();
         } catch (SQLException e) {
@@ -226,7 +253,63 @@ public class DatabaseManager {
                     + " (nenhuma alteração foi aplicada): " + e.getMessage(), e);
         } finally {
             conn.setAutoCommit(true);
+            try (Statement s = conn.createStatement()) { s.execute("PRAGMA foreign_keys = ON"); }
         }
+    }
+
+    /**
+     * v3: login de usuários. Os dados que existiam antes (de quando o app tinha um único perfil) ficam
+     * com o usuário 1, que ainda não tem usuário/senha nem Google: a tela de login pede para criar esse acesso.
+     */
+    private static void migrarParaV3(Statement stmt, Connection conn) throws SQLException {
+        for (String coluna : List.of("usuario TEXT COLLATE NOCASE", "email TEXT COLLATE NOCASE",
+                "senha_hash TEXT", "google_id TEXT", "criado_em TEXT", "ultimo_login TEXT")) {
+            if (!temColuna(conn, "usuarios", coluna.substring(0, coluna.indexOf(' '))))
+                stmt.execute("ALTER TABLE usuarios ADD COLUMN " + coluna);
+        }
+        stmt.execute("INSERT OR IGNORE INTO usuarios (id, nome) VALUES (1, 'Usuário')");
+        stmt.execute("UPDATE usuarios SET criado_em = datetime('now', 'localtime') WHERE criado_em IS NULL");
+
+        // contas e categorias: nome passa a ser único por usuário (antes era único no banco todo).
+        stmt.execute("""
+            CREATE TABLE contas_v3 (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id    INTEGER NOT NULL REFERENCES usuarios(id),
+                nome          TEXT    NOT NULL COLLATE NOCASE,
+                saldo_inicial REAL    NOT NULL DEFAULT 0,
+                UNIQUE(usuario_id, nome)
+            )
+        """);
+        stmt.execute("INSERT INTO contas_v3 (id, usuario_id, nome, saldo_inicial) SELECT id, 1, nome, saldo_inicial FROM contas");
+        stmt.execute("DROP TABLE contas");
+        stmt.execute("ALTER TABLE contas_v3 RENAME TO contas");
+
+        stmt.execute("""
+            CREATE TABLE categorias_v3 (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+                nome       TEXT    NOT NULL COLLATE NOCASE,
+                UNIQUE(usuario_id, nome)
+            )
+        """);
+        stmt.execute("INSERT INTO categorias_v3 (id, usuario_id, nome) SELECT id, 1, nome FROM categorias");
+        stmt.execute("DROP TABLE categorias");
+        stmt.execute("ALTER TABLE categorias_v3 RENAME TO categorias");
+
+        stmt.execute("""
+            CREATE TABLE mapeamentos_v3 (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id    INTEGER NOT NULL REFERENCES usuarios(id),
+                padrao        TEXT    NOT NULL COLLATE NOCASE,
+                categoria_id  INTEGER NOT NULL REFERENCES categorias(id),
+                detalhe       TEXT    NOT NULL,
+                UNIQUE(usuario_id, padrao)
+            )
+        """);
+        stmt.execute("INSERT INTO mapeamentos_v3 (id, usuario_id, padrao, categoria_id, detalhe) "
+                + "SELECT id, 1, padrao, categoria_id, detalhe FROM mapeamentos_descricao");
+        stmt.execute("DROP TABLE mapeamentos_descricao");
+        stmt.execute("ALTER TABLE mapeamentos_v3 RENAME TO mapeamentos_descricao");
     }
 
     private static boolean temColuna(Connection conn, String tabela, String coluna) throws SQLException {

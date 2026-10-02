@@ -82,4 +82,5 @@ class AbaContas extends AbaCrud<SaldoConta> {
 
     @Override protected void excluir(SaldoConta s) { cf.excluirConta(s.conta().getId()); }
     @Override protected String descrever(SaldoConta s) { return "a conta \"" + s.getNome() + "\""; }
+    @Override protected String descreverVarios(List<SaldoConta> itens) { return "as " + itens.size() + " contas selecionadas"; }
 }

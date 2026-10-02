@@ -65,16 +65,21 @@ class MigracaoTest {
             assertFalse(colunas(arquivo, t).contains("mes"), t);
             assertFalse(colunas(arquivo, t).contains("ano"), t);
         }
-        assertEquals(List.of("id", "nome", "data_nascimento"), colunas(arquivo, "usuarios"));
-        assertEquals(List.of("id", "nome", "saldo_inicial"), colunas(arquivo, "contas"));
+        assertEquals(List.of("id", "nome", "data_nascimento", "usuario", "email", "senha_hash", "google_id", "criado_em", "ultimo_login"),
+                colunas(arquivo, "usuarios"));
+        assertEquals(List.of("id", "usuario_id", "nome", "saldo_inicial"), colunas(arquivo, "contas"));
+        assertTrue(colunas(arquivo, "categorias").contains("usuario_id"));
 
-        var receita = new ReceitaRepository().listarTodos().get(0);
+        var receita = new ReceitaRepository(1).listarTodos().get(0);
         assertEquals("Salário", receita.getOrigem());
         assertEquals("JULHO", receita.getMes());
-        var despesa = new DespesaRepository().listarTodos().get(0);
+        var despesa = new DespesaRepository(1).listarTodos().get(0);
         assertEquals(new java.math.BigDecimal("636.02"), despesa.getValor());
         assertEquals(LocalDate.of(2026, 8, 10), despesa.getData());
-        assertEquals("Ana", new UsuarioRepository().buscarPrincipal().getNome());
+        var ana = new UsuarioRepository().buscarPorId(1).orElseThrow();
+        assertEquals("Ana", ana.getNome());
+        assertTrue(ana.semAcesso(), "o perfil antigo fica sem login até a pessoa criar o acesso");
+        assertEquals(ana.getId(), new UsuarioRepository().buscarSemAcesso().orElseThrow().getId());
 
         try (Stream<Path> arquivos = Files.list(dir)) {
             List<Path> backups = arquivos.filter(p -> p.getFileName().toString().startsWith("controle_financeiro-backup-v0-")).toList();
@@ -93,7 +98,7 @@ class MigracaoTest {
         try (Stream<Path> arquivos = Files.list(dir)) {
             assertEquals(1, arquivos.filter(p -> p.getFileName().toString().contains("-backup-")).count());
         }
-        assertEquals(1, new ReceitaRepository().listarTodos().size());
+        assertEquals(1, new ReceitaRepository(1).listarTodos().size());
     }
 
     @Test
@@ -109,11 +114,62 @@ class MigracaoTest {
 
         DatabaseManager.inicializar();
 
-        var contas = new repository.ContaRepository().listarTodos();
+        var contas = new repository.ContaRepository(1).listarTodos();
         assertEquals(1, contas.size());
         assertEquals(new java.math.BigDecimal("0.00"), contas.get(0).getSaldoInicial());
         try (Stream<Path> arquivos = Files.list(dir)) {
             assertEquals(1, arquivos.filter(p -> p.getFileName().toString().startsWith("controle_financeiro-backup-v1-")).count());
+        }
+    }
+
+    @Test
+    void deveMigrarDaVersao2ParaAVersao3AtribuindoTudoAoPerfilAntigo() throws Exception {
+        Path arquivo = dir.resolve("controle_financeiro.db");
+        try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + arquivo);
+             Statement s = c.createStatement()) {
+            s.execute("CREATE TABLE usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, data_nascimento TEXT)");
+            s.execute("CREATE TABLE categorias (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE COLLATE NOCASE)");
+            s.execute("CREATE TABLE contas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE COLLATE NOCASE, "
+                    + "saldo_inicial REAL NOT NULL DEFAULT 0)");
+            s.execute("CREATE TABLE despesas (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria_id INTEGER NOT NULL REFERENCES categorias(id), "
+                    + "detalhamento TEXT NOT NULL, valor REAL NOT NULL, conta_id INTEGER NOT NULL REFERENCES contas(id), data TEXT NOT NULL)");
+            s.execute("CREATE TABLE mapeamentos_descricao (id INTEGER PRIMARY KEY AUTOINCREMENT, padrao TEXT NOT NULL UNIQUE COLLATE NOCASE, "
+                    + "categoria_id INTEGER NOT NULL REFERENCES categorias(id), detalhe TEXT NOT NULL)");
+            s.execute("INSERT INTO usuarios (id, nome, data_nascimento) VALUES (1, 'Hudsola', '2001-01-01')");
+            s.execute("INSERT INTO categorias (id, nome) VALUES (5, 'Moradia'), (12, 'Assinaturas')");
+            s.execute("INSERT INTO contas (id, nome, saldo_inicial) VALUES (2, 'Nubank', 150.5)");
+            s.execute("INSERT INTO despesas (categoria_id, detalhamento, valor, conta_id, data) VALUES (12, 'Spotify', 12.9, 2, '2026-09-19')");
+            s.execute("INSERT INTO mapeamentos_descricao (padrao, categoria_id, detalhe) VALUES ('Spotify', 12, 'Spotify')");
+            s.execute("PRAGMA user_version = 2");
+        }
+        DatabaseManager.setUrl("jdbc:sqlite:" + arquivo);
+
+        DatabaseManager.inicializar();
+
+        // Tudo continua com os mesmos ids, agora do usuário 1.
+        var contas = new repository.ContaRepository(1).listarTodos();
+        assertEquals(1, contas.size());
+        assertEquals(2, contas.get(0).getId());
+        assertEquals(new java.math.BigDecimal("150.50"), contas.get(0).getSaldoInicial());
+        var categorias = new repository.CategoriaRepository(1).listarTodos();
+        assertEquals(List.of("Assinaturas", "Moradia"), categorias.stream().map(model.Categoria::getNome).toList());
+        var despesa = new DespesaRepository(1).listarTodos().get(0);
+        assertEquals("Assinaturas", despesa.getCategoriaNome());
+        assertEquals(1, new repository.MapeamentoRepository(1).listarTodos().size());
+        assertTrue(new UsuarioRepository().buscarPorId(1).orElseThrow().semAcesso());
+
+        // Outro usuário enxerga nada do usuário 1 e pode usar os mesmos nomes.
+        int outro = util.DatabaseTestHelper.novoUsuario("outro");
+        assertTrue(new DespesaRepository(outro).listarTodos().isEmpty());
+        new repository.ContaRepository(outro).salvar(new model.Conta("Nubank"));
+        assertEquals(1, new repository.ContaRepository(outro).listarTodos().size());
+
+        try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + arquivo);
+             ResultSet rs = c.createStatement().executeQuery("PRAGMA foreign_key_check")) {
+            assertFalse(rs.next(), "nenhuma referência quebrada depois de recriar as tabelas");
+        }
+        try (Stream<Path> arquivos = Files.list(dir)) {
+            assertEquals(1, arquivos.filter(p -> p.getFileName().toString().startsWith("controle_financeiro-backup-v2-")).count());
         }
     }
 

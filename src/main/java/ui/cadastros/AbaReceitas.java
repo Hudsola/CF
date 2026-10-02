@@ -68,4 +68,8 @@ class AbaReceitas extends AbaCrud<Receita> {
     @Override protected void salvarAlteracao(Receita original) { cf.atualizarReceita(lerFormulario(original.getId())); }
     @Override protected void excluir(Receita r) { cf.excluirReceita(r.getId()); }
     @Override protected String descrever(Receita r) { return "a receita \"" + r.getOrigem() + "\""; }
+    @Override protected String descreverVarios(List<Receita> itens) {
+        return "as " + itens.size() + " receitas selecionadas (total "
+                + Dinheiro.formatar(itens.stream().map(Receita::getValor).reduce(Dinheiro.ZERO, java.math.BigDecimal::add)) + ")";
+    }
 }

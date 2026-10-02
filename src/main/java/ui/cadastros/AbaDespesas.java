@@ -130,8 +130,27 @@ class AbaDespesas extends AbaCrud<Despesa> {
 
     @Override
     protected void aposRecarregar(List<Despesa> itens) {
-        BigDecimal total = itens.stream().map(Despesa::getValor).reduce(Dinheiro.ZERO, BigDecimal::add);
-        lblTotal.setText(itens.size() + " despesa(s) — total " + Dinheiro.formatar(total));
+        if (!ouvindoSelecao) {
+            tabela.getSelectionModel().getSelectedItems().addListener(
+                    (javafx.collections.ListChangeListener<Despesa>) c -> atualizarTotais());
+            ouvindoSelecao = true;
+        }
+        atualizarTotais();
+    }
+
+    private boolean ouvindoSelecao = false;
+
+    /** "53 despesa(s) — total R$ X" e, havendo seleção, "| 3 selecionada(s) — R$ Y". */
+    private void atualizarTotais() {
+        List<Despesa> itens = tabela.getItems();
+        String texto = itens.size() + " despesa(s) — total " + Dinheiro.formatar(somar(itens));
+        List<Despesa> sel = selecionados();
+        if (!sel.isEmpty()) texto += "   |   " + sel.size() + " selecionada(s) — " + Dinheiro.formatar(somar(sel));
+        lblTotal.setText(texto);
+    }
+
+    private static BigDecimal somar(List<Despesa> itens) {
+        return itens.stream().map(Despesa::getValor).reduce(Dinheiro.ZERO, BigDecimal::add);
     }
 
     @Override
@@ -162,4 +181,8 @@ class AbaDespesas extends AbaCrud<Despesa> {
     @Override protected void salvarAlteracao(Despesa original) { cf.atualizarDespesa(lerFormulario(original.getId())); recarregarAnos(); }
     @Override protected void excluir(Despesa d) { cf.excluirDespesa(d.getId()); }
     @Override protected String descrever(Despesa d) { return "a despesa \"" + d.getDetalhamento() + "\""; }
+    @Override protected String descreverVarios(List<Despesa> itens) {
+        return "as " + itens.size() + " despesas selecionadas (total "
+                + Dinheiro.formatar(itens.stream().map(Despesa::getValor).reduce(Dinheiro.ZERO, BigDecimal::add)) + ")";
+    }
 }

@@ -10,6 +10,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import ui.App;
+import ui.Sessao;
 
 import java.nio.file.Path;
 
@@ -35,19 +36,24 @@ public class NavBar extends HBox {
         ativar(btnHome);
     }
 
-    /** Mostra onde está o arquivo do banco (para backup ou para abrir no DB Browser). */
+    /** Usuário logado, atalho para a pasta do banco (caminho no tooltip) e botão Sair. */
     private HBox criarInfoBanco() {
         Path arquivo = DatabaseManager.arquivoBanco();
-        Label lbl = new Label("Banco: " + arquivo);
-        lbl.getStyleClass().add("navbar-info");
-        lbl.setTooltip(new Tooltip("Arquivo com os seus dados. Copie-o para fazer backup.\n"
-                + "Para abrir no DB Browser, feche o app antes de editar."));
-
-        Button btnPasta = new Button("Abrir pasta");
+        Button btnPasta = new Button("Pasta de dados");
         btnPasta.getStyleClass().add("btn-secondary");
+        btnPasta.setTooltip(new Tooltip("Banco: " + arquivo + "\nCopie esse arquivo para fazer backup.\n"
+                + "Para abrir no DB Browser, feche o app antes de editar."));
         btnPasta.setOnAction(e -> App.abrirNoSistema(arquivo.getParent()));
 
-        HBox box = new HBox(10, lbl, btnPasta);
+        Label lblUsuario = new Label(Sessao.ativa() ? "Olá, " + Sessao.usuario().getNome() : "");
+        lblUsuario.getStyleClass().add("navbar-usuario");
+
+        Button btnSair = new Button("Sair");
+        btnSair.getStyleClass().add("btn-secondary");
+        btnSair.setTooltip(new Tooltip("Encerrar a sessão e voltar para a tela de login"));
+        btnSair.setOnAction(e -> App.mostrarLogin());
+
+        HBox box = new HBox(10, btnPasta, lblUsuario, btnSair);
         box.setAlignment(Pos.CENTER_RIGHT);
         return box;
     }

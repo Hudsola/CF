@@ -17,13 +17,17 @@ import static util.Assercoes.v;
 
 class ReceitaRepositoryTest {
 
-    private final ReceitaRepository repo   = new ReceitaRepository();
-    private final ContaRepository contaRepo = new ContaRepository();
+    private int usuarioId;
+
+    private ReceitaRepository repo;
+    private ContaRepository contaRepo;
     private int contaId;
 
     @BeforeEach
     void setUp() {
-        DatabaseTestHelper.setup();
+        usuarioId = DatabaseTestHelper.setup();
+        repo = new ReceitaRepository(usuarioId);
+        contaRepo = new ContaRepository(usuarioId);
         contaRepo.salvar(new Conta("Nubank"));
         contaId = contaRepo.listarTodos().get(0).getId();
     }

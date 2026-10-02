@@ -16,26 +16,39 @@ public class ControleFinanceiro {
 
     public static final List<String> MESES = Meses.NOMES;
 
-    private final CategoriaRepository categoriaRepo = new CategoriaRepository();
-    private final ContaRepository contaRepo = new ContaRepository();
-    private final ReceitaRepository receitaRepo = new ReceitaRepository();
-    private final DespesaRepository despesaRepo = new DespesaRepository();
-    private final InvestimentoRepository investRepo = new InvestimentoRepository();
-    private final LancamentoFixoRepository fixoRepo = new LancamentoFixoRepository();
+    private final int usuarioId;
+    private final CategoriaRepository categoriaRepo;
+    private final ContaRepository contaRepo;
+    private final ReceitaRepository receitaRepo;
+    private final DespesaRepository despesaRepo;
+    private final InvestimentoRepository investRepo;
+    private final LancamentoFixoRepository fixoRepo;
     private final UsuarioRepository usuarioRepo = new UsuarioRepository();
-    private final ImportacaoCsv importacao = new ImportacaoCsv();
+    private final ImportacaoCsv importacao;
+
+    /** Tudo o que esta instância lê ou grava pertence ao usuário informado (o usuário logado). */
+    public ControleFinanceiro(int usuarioId) {
+        this.usuarioId = usuarioId;
+        this.categoriaRepo = new CategoriaRepository(usuarioId);
+        this.contaRepo = new ContaRepository(usuarioId);
+        this.receitaRepo = new ReceitaRepository(usuarioId);
+        this.despesaRepo = new DespesaRepository(usuarioId);
+        this.investRepo = new InvestimentoRepository(usuarioId);
+        this.fixoRepo = new LancamentoFixoRepository(usuarioId);
+        this.importacao = new ImportacaoCsv(usuarioId);
+    }
 
     // --- Usuário ---
 
     public Usuario getUsuario() {
-        return usuarioRepo.buscarPrincipal();
+        return usuarioRepo.buscarPorId(usuarioId).orElseThrow(() -> new IllegalStateException("Usuário não encontrado."));
     }
 
     public void atualizarUsuario(String nome, LocalDate dataNascimento) {
         if (nome == null || nome.isBlank()) throw new IllegalArgumentException("Informe o nome.");
         if (dataNascimento != null && dataNascimento.isAfter(LocalDate.now()))
             throw new IllegalArgumentException("Data de nascimento no futuro.");
-        usuarioRepo.atualizar(new Usuario(getUsuario().getId(), nome.trim(), dataNascimento));
+        usuarioRepo.atualizarPerfil(usuarioId, nome.trim(), getUsuario().getEmail(), dataNascimento);
     }
 
     /** Nível e XP calculados a partir de todos os lançamentos (ver {@link CalculadoraXp}). */
@@ -61,11 +74,13 @@ public class ControleFinanceiro {
 
     public void salvarReceita(Receita r) {
         validarLancamento(r.getOrigem(), "Origem", r.getValor(), r.getData());
+        exigirConta(r.getContaId());
         receitaRepo.salvar(r);
     }
 
     public void atualizarReceita(Receita r) {
         validarLancamento(r.getOrigem(), "Origem", r.getValor(), r.getData());
+        exigirConta(r.getContaId());
         receitaRepo.atualizar(r);
     }
 
@@ -76,11 +91,15 @@ public class ControleFinanceiro {
 
     public void salvarDespesa(Despesa d) {
         validarLancamento(d.getDetalhamento(), "Detalhamento", d.getValor(), d.getData());
+        exigirConta(d.getContaId());
+        exigirCategoria(d.getCategoriaId());
         despesaRepo.salvar(d);
     }
 
     public void atualizarDespesa(Despesa d) {
         validarLancamento(d.getDetalhamento(), "Detalhamento", d.getValor(), d.getData());
+        exigirConta(d.getContaId());
+        exigirCategoria(d.getCategoriaId());
         despesaRepo.atualizar(d);
     }
 
@@ -96,11 +115,13 @@ public class ControleFinanceiro {
 
     public void salvarInvestimento(Investimento i) {
         validarLancamento(i.getTipo(), "Tipo", i.getValor(), i.getData());
+        exigirConta(i.getContaId());
         investRepo.salvar(i);
     }
 
     public void atualizarInvestimento(Investimento i) {
         validarLancamento(i.getTipo(), "Tipo", i.getValor(), i.getData());
+        exigirConta(i.getContaId());
         investRepo.atualizar(i);
     }
 
@@ -111,11 +132,13 @@ public class ControleFinanceiro {
 
     public void salvarLancamentoFixo(LancamentoFixo lf) {
         validarFixo(lf);
+        exigirDonoDoFixo(lf);
         fixoRepo.salvar(lf);
     }
 
     public void atualizarLancamentoFixo(LancamentoFixo lf) {
         validarFixo(lf);
+        exigirDonoDoFixo(lf);
         fixoRepo.atualizar(lf);
     }
 
@@ -280,6 +303,21 @@ public class ControleFinanceiro {
                 .entrySet().stream()
                 .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
+    }
+
+    /** Impede gravar lançamentos em conta ou categoria de outro usuário (ou inexistente). */
+    private void exigirConta(int contaId) {
+        if (!contaRepo.pertence(contaId)) throw new IllegalArgumentException("Conta inválida. Selecione uma das suas contas.");
+    }
+
+    private void exigirCategoria(int categoriaId) {
+        if (!categoriaRepo.pertence(categoriaId))
+            throw new IllegalArgumentException("Categoria inválida. Selecione uma das suas categorias.");
+    }
+
+    private void exigirDonoDoFixo(LancamentoFixo lf) {
+        exigirConta(lf.getContaId());
+        if (lf.getTipo() == LancamentoFixo.Tipo.DESPESA) exigirCategoria(lf.getCategoriaId());
     }
 
     private static void validarLancamento(String texto, String campo, BigDecimal valor, LocalDate data) {

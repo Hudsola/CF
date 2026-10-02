@@ -32,6 +32,7 @@ final class AbaNomes {
             }
             @Override protected void excluir(Categoria c) { cf.excluirCategoria(c.getId()); }
             @Override protected String descrever(Categoria c) { return "a categoria \"" + c.getNome() + "\""; }
+            @Override protected String descreverVarios(List<Categoria> itens) { return "as " + itens.size() + " categorias selecionadas"; }
         };
     }
 }

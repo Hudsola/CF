@@ -6,8 +6,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import model.Usuario;
 import ui.components.NavBar;
 import ui.home.HomeView;
+import ui.login.LoginView;
+
+import java.net.URI;
 
 public class App extends Application {
 
@@ -31,12 +35,6 @@ public class App extends Application {
         }
 
         root = new BorderPane();
-        NavBar navBar = new NavBar();
-        root.setTop(navBar);
-
-        // Abre na home por padrão
-        navegarPara("home");
-
         Scene scene = new Scene(root, 1200, 800);
         scene.getStylesheets().add(getClass().getResource("/css/dark-theme.css").toExternalForm());
 
@@ -44,10 +42,26 @@ public class App extends Application {
         stage.setScene(scene);
         stage.setMinWidth(900);
         stage.setMinHeight(600);
+        mostrarLogin();
         stage.show();
     }
 
+    /** Tela inicial: nada dos dados financeiros é mostrado antes do login. */
+    public static void mostrarLogin() {
+        Sessao.encerrar();
+        root.setTop(null);
+        root.setCenter(new LoginView(App::entrar).getView());
+    }
+
+    /** Chamado pela tela de login quando o usuário se autentica. */
+    public static void entrar(Usuario usuario) {
+        Sessao.iniciar(usuario);
+        root.setTop(new NavBar());
+        navegarPara("home");
+    }
+
     public static void navegarPara(String tela) {
+        if (!Sessao.ativa()) { mostrarLogin(); return; }
         switch (tela) {
             case "home" -> root.setCenter(new HomeView().getView());
             case "cadastros" -> root.setCenter(new ui.cadastros.CadastrosView().getView());
@@ -55,9 +69,19 @@ public class App extends Application {
         }
     }
 
+    /** Recria a barra superior (ex: depois de o usuário mudar o nome no perfil). */
+    public static void atualizarBarra() {
+        if (Sessao.ativa()) root.setTop(new NavBar());
+    }
+
     /** Abre um arquivo ou pasta no programa padrão do sistema (no Windows, o Explorer para pastas). */
     public static void abrirNoSistema(java.nio.file.Path caminho) {
-        if (instancia != null) instancia.getHostServices().showDocument(caminho.toUri().toString());
+        abrirEndereco(caminho.toUri());
+    }
+
+    /** Abre um endereço no navegador padrão. */
+    public static void abrirEndereco(URI endereco) {
+        if (instancia != null) instancia.getHostServices().showDocument(endereco.toString());
     }
 
     public static Stage getStage() { return primaryStage; }

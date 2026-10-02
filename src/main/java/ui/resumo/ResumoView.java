@@ -18,7 +18,7 @@ import java.util.Set;
 
 public class ResumoView {
 
-    private final ControleFinanceiro cf = new ControleFinanceiro();
+    private final ControleFinanceiro cf = ui.Sessao.financeiro();
 
     private final Label lblGasto = new Label("—");
     private final Label lblInvestido = new Label("—");

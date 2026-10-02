@@ -33,6 +33,53 @@
     -fx-background-color: #1e1e1e;
 }
 
+.navbar-usuario {
+    -fx-text-fill: #E8A838;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* --- Login --- */
+.login-card {
+    -fx-background-color: #1a1a1a;
+    -fx-border-color: #2a2a2a;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
+
+.login-titulo {
+    -fx-text-fill: #E8A838;
+    -fx-font-size: 22px;
+    -fx-font-family: "Georgia", serif;
+    -fx-font-style: italic;
+}
+
+.login-aviso {
+    -fx-background-color: #2a2412;
+    -fx-border-color: #E8A838;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.btn-google {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #1f1f1f;
+    -fx-font-weight: bold;
+    -fx-padding: 8 16 8 16;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.btn-google:hover { -fx-background-color: #e8e8e8; }
+
+.hyperlink { -fx-text-fill: #4A9EE8; }
+
+.password-field {
+    -fx-text-fill: #d0d0d0;
+}
+
 .navbar-info {
     -fx-text-fill: #666666;
     -fx-font-size: 11px;

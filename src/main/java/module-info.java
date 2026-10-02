@@ -4,6 +4,9 @@ module com.controlefinanceiro {
     requires javafx.graphics;
     requires java.sql;
     requires org.xerial.sqlitejdbc;
+    requires com.google.gson;    // JSON do login Google
+    requires java.net.http;      // chamadas HTTPS ao Google
+    requires jdk.httpserver;     // recebe o retorno do navegador em 127.0.0.1
 
     opens ui to javafx.graphics, javafx.fxml;
     opens ui.home to javafx.fxml;

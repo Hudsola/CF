@@ -18,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ImportacaoCsvTest {
 
+    private int usuarioId;
+
     @TempDir Path dir;
 
     private ControleFinanceiro cf;
@@ -27,8 +29,8 @@ class ImportacaoCsvTest {
 
     @BeforeEach
     void setUp() {
-        DatabaseTestHelper.setup();
-        cf = new ControleFinanceiro();
+        usuarioId = DatabaseTestHelper.setup();
+        cf = new ControleFinanceiro(usuarioId);
         cf.salvarConta(new Conta("Nubank"));
         contaId = cf.getContas().get(0).getId();
         alimentacao = categoria("Alimentação");
@@ -121,14 +123,14 @@ class ImportacaoCsvTest {
 
     @Test
     void deveAtualizarMapeamentoQuandoACategoriaForTrocada() throws Exception {
-        new MapeamentoRepository().salvar(new MapeamentoDescricao("Cinema", alimentacao.getId(), "Cinema"));
+        new MapeamentoRepository(usuarioId).salvar(new MapeamentoDescricao("Cinema", alimentacao.getId(), "Cinema"));
         String arq = csv("date,title,amount\n2026-07-01,Cinema Shopping,30.00\n", StandardCharsets.UTF_8);
         ResultadoLeituraCsv r = cf.lerCsv(arq, contaId);
         r.linhas().get(0).setCategoria(lazer);
 
         cf.confirmarImportacao(r.linhas(), contaId);
 
-        List<MapeamentoDescricao> maps = new MapeamentoRepository().listarTodos();
+        List<MapeamentoDescricao> maps = new MapeamentoRepository(usuarioId).listarTodos();
         assertEquals(1, maps.size());
         assertEquals("Cinema", maps.get(0).getPadrao());
         assertEquals(lazer.getId(), maps.get(0).getCategoriaId());

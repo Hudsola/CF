@@ -30,13 +30,27 @@ final class Consultas {
         return lista;
     }
 
-    /** Anos que têm lançamentos na tabela (a data é texto ISO, então o ano são os 4 primeiros caracteres). */
-    static Set<Integer> anos(String tabela) {
-        Set<Integer> anos = new TreeSet<>();
+    static boolean existe(String sql, Object... parametros) {
         try (Connection conn = DatabaseManager.getConnection();
-             ResultSet rs = conn.createStatement().executeQuery(
-                     "SELECT DISTINCT CAST(substr(data, 1, 4) AS INTEGER) FROM " + tabela)) {
-            while (rs.next()) anos.add(rs.getInt(1));
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parametros.length; i++) ps.setObject(i + 1, parametros[i]);
+            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro na consulta: " + e.getMessage(), e);
+        }
+    }
+
+    /** Anos com lançamentos do usuário na tabela (a data é texto ISO: o ano são os 4 primeiros caracteres). */
+    static Set<Integer> anos(String tabela, int usuarioId) {
+        Set<Integer> anos = new TreeSet<>();
+        String sql = "SELECT DISTINCT CAST(substr(t.data, 1, 4) AS INTEGER) FROM " + tabela + " t "
+                + "JOIN contas c ON c.id = t.conta_id WHERE c.usuario_id = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, usuarioId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) anos.add(rs.getInt(1));
+            }
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao listar anos de " + tabela + ": " + e.getMessage(), e);
         }

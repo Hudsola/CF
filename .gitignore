@@ -30,3 +30,7 @@ desktop.ini
 
 # Logs
 *.log
+
+# Credenciais do login com Google (baixadas do Google Cloud) — nunca versionar
+google-oauth.json
+client_secret*.json

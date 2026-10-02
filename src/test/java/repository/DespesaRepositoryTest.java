@@ -16,16 +16,21 @@ import static util.Assercoes.v;
 
 class DespesaRepositoryTest {
 
-    private final DespesaRepository   repo      = new DespesaRepository();
-    private final ContaRepository     contaRepo = new ContaRepository();
-    private final CategoriaRepository catRepo   = new CategoriaRepository();
+    private int usuarioId;
+
+    private DespesaRepository   repo;
+    private ContaRepository     contaRepo;
+    private CategoriaRepository catRepo;
     private int contaId;
     private int moradia;
     private int lazer;
 
     @BeforeEach
     void setUp() {
-        DatabaseTestHelper.setup();
+        usuarioId = DatabaseTestHelper.setup();
+        repo = new DespesaRepository(usuarioId);
+        contaRepo = new ContaRepository(usuarioId);
+        catRepo = new CategoriaRepository(usuarioId);
         contaRepo.salvar(new Conta("Nubank"));
         contaId = contaRepo.listarTodos().get(0).getId();
         moradia = categoria("Moradia");

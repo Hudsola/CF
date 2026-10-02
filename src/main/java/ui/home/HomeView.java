@@ -18,7 +18,7 @@ import java.util.Map;
 
 public class HomeView {
 
-    private final ControleFinanceiro cf = new ControleFinanceiro();
+    private final ControleFinanceiro cf = ui.Sessao.financeiro();
     private final String mesAtual = Meses.nome(LocalDate.now());
     private final int anoAtual = LocalDate.now().getYear();
 
@@ -70,14 +70,17 @@ public class HomeView {
 
         Button btnEditar = new Button("✎");
         btnEditar.getStyleClass().add("btn-secondary");
-        btnEditar.setTooltip(new Tooltip("Editar nome e data de nascimento"));
-        btnEditar.setOnAction(e -> { if (PerfilDialog.editar(cf)) App.navegarPara("home"); });
+        btnEditar.setTooltip(new Tooltip("Editar perfil, senha e conta Google"));
+        btnEditar.setOnAction(e -> {
+            if (PerfilDialog.editar(usuario)) { App.atualizarBarra(); App.navegarPara("home"); }
+        });
         Region espaco = new Region();
         HBox.setHgrow(espaco, Priority.ALWAYS);
         HBox topo = new HBox(6, lblNome, espaco, btnEditar);
         topo.setAlignment(Pos.CENTER_LEFT);
 
-        Label lblIdade = new Label(usuario.getIdade() > 0 ? usuario.getIdade() + " anos" : "Idade não informada");
+        Label lblIdade = new Label((usuario.getUsuario() != null ? "@" + usuario.getUsuario() + "  •  " : "")
+                + (usuario.getIdade() > 0 ? usuario.getIdade() + " anos" : "Idade não informada"));
         lblIdade.getStyleClass().add("card-stat-label");
 
         Label lblSaldoLabel = new Label("SALDO GERAL (TODAS AS CONTAS)");

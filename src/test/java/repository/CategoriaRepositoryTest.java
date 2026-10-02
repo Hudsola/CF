@@ -11,10 +11,13 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class CategoriaRepositoryTest {
 
-    private final CategoriaRepository repo = new CategoriaRepository();
+    private int usuarioId;
+
+    private CategoriaRepository repo;
 
     @BeforeEach
-    void setUp() { DatabaseTestHelper.setup(); }
+    void setUp() { usuarioId = DatabaseTestHelper.setup();
+        repo = new CategoriaRepository(usuarioId); }
 
     @Test
     @Order(1)
@@ -69,7 +72,7 @@ class CategoriaRepositoryTest {
         repo.salvar(new Categoria("ComMapeamento"));
         Categoria cat = repo.listarTodos().stream()
             .filter(c -> c.getNome().equals("ComMapeamento")).findFirst().orElseThrow();
-        MapeamentoRepository mapRepo = new MapeamentoRepository();
+        MapeamentoRepository mapRepo = new MapeamentoRepository(usuarioId);
         mapRepo.salvar(new model.MapeamentoDescricao("Loja X", cat.getId(), "Loja X"));
 
         repo.excluir(cat.getId());
@@ -80,11 +83,11 @@ class CategoriaRepositoryTest {
     @Test
     @Order(7)
     void naoDeveExcluirCategoriaUsadaEmLancamentoFixo() {
-        new ContaRepository().salvar(new model.Conta("Nubank"));
-        int contaId = new ContaRepository().listarTodos().get(0).getId();
+        new ContaRepository(usuarioId).salvar(new model.Conta("Nubank"));
+        int contaId = new ContaRepository(usuarioId).listarTodos().get(0).getId();
         Categoria moradia = repo.listarTodos().stream()
             .filter(c -> c.getNome().equals("Moradia")).findFirst().orElseThrow();
-        new LancamentoFixoRepository().salvar(new model.LancamentoFixo(
+        new LancamentoFixoRepository(usuarioId).salvar(new model.LancamentoFixo(
             model.LancamentoFixo.Tipo.DESPESA, "Aluguel", moradia.getId(), new java.math.BigDecimal("1500.00"), contaId, 10));
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> repo.excluir(moradia.getId()));

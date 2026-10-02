@@ -6,8 +6,9 @@ Aplicativo desktop de controle financeiro pessoal em **Java 17 + JavaFX**, com d
 
 ## Funcionalidades
 
+- **Login**: tela inicial com usuário/e-mail e senha ou **conta Google**; cada usuário só vê os próprios dados (contas, categorias, lançamentos, fixos, importações). Detalhes em [Login e usuários](#login-e-usuários)
 - **Home**: perfil editável (nome e nascimento), saldo geral, receitas/despesas/saldo do mês atual, **saldo por conta**, nível e XP, gráficos do mês e lançamentos fixos ativos
-- **Cadastros**: todas as abas têm cadastro, **edição** (botão Editar ou duplo clique na linha) e exclusão com confirmação
+- **Cadastros**: todas as abas têm cadastro, **edição** (botão Editar ou duplo clique na linha) e exclusão com confirmação — inclusive de **várias linhas de uma vez** (Ctrl+clique, Shift+clique ou Ctrl+A, e o botão Excluir ou a tecla Delete)
   - **Receitas, Despesas e Investimentos**; despesas com filtro por categoria, mês e ano e total do filtro
   - **Importar CSV** (aba Despesas): importa extratos/faturas (ex: Nubank `date,title,amount`) com preview editável
     - aceita UTF-8 ou Windows-1252 (CSV salvo pelo Excel), separador `,` ou `;`, datas `aaaa-mm-dd` ou `dd/mm/aaaa` e valores `1.234,56` ou `1234.56`
@@ -38,6 +39,31 @@ Para passar do nível N para o N+1 são necessários N × 100 XP (100 para o ní
 
 ---
 
+## Login e usuários
+
+O app abre na tela de login; a Home e as demais telas só aparecem depois de entrar. O botão **Sair** (canto superior direito) volta para o login.
+
+- **Conta local**: nome, usuário, e-mail, data de nascimento (opcional) e senha (mínimo de 8 caracteres). Para entrar, use o usuário **ou** o e-mail.
+- **Conta Google**: no primeiro login com Google o app cria o usuário com o nome e o e-mail da conta Google. Esse usuário **não tem senha no app** — quem confirma a identidade é o Google. Se quiser entrar também sem o Google, crie uma senha em ✎ (perfil) na Home.
+- **Perfil** (✎ na Home): alterar nome, e-mail e nascimento, criar/alterar a senha e **vincular a conta Google** a um usuário local.
+- **Dados de antes do login**: bancos de versões anteriores tinham um único perfil sem senha. Na primeira abertura, a tela de login mostra o aviso *"Seus dados de antes do login estão guardados"*: crie usuário e senha (ou use a conta Google) para esse perfil e continue com todos os lançamentos.
+- **Isolamento**: contas, categorias e mapeamentos de importação pertencem a um usuário; receitas, despesas, investimentos e fixos pertencem ao dono da conta. Cada usuário novo recebe as 9 categorias padrão.
+- **Senhas**: guardadas apenas como hash PBKDF2-SHA256 com salt aleatório e 600.000 iterações — o app nunca grava a senha em si.
+
+### Login com Google
+
+Para o botão **Entrar com Google** funcionar, o app precisa de credenciais OAuth registradas no Google Cloud (gratuito). Sem elas o botão aparece desativado e o login local funciona normalmente.
+
+1. Acesse [console.cloud.google.com](https://console.cloud.google.com), crie um projeto (ex: *Controle Financeiro*).
+2. **APIs e serviços → Tela de consentimento OAuth** (ou *Google Auth Platform → Branding*): tipo **Externo**, preencha o nome do app e o seu e-mail. Em **Usuários de teste** (*Audience*), adicione os e-mails Google que vão usar o app. Escopos: `openid`, `email`, `profile` (não exigem verificação do Google).
+3. **APIs e serviços → Credenciais → Criar credenciais → ID do cliente OAuth**, tipo de aplicativo **App para computador** (*Desktop app*).
+4. Clique em **Fazer download do JSON** e salve o arquivo com o nome **`google-oauth.json`** na pasta de dados (`C:\Users\<você>\ControleFinanceiro\` — na tela de login há o link **Abrir pasta de dados**).
+5. Reabra o app: o botão **Entrar com Google** fica ativo.
+
+Ao clicar, o app abre o navegador na página de login do Google e recebe o retorno em `http://127.0.0.1:<porta>/` (fluxo para apps de desktop, com PKCE). O arquivo de credenciais fica fora do Git (`.gitignore`). Enquanto o app estiver em modo de teste no Google Cloud, só os e-mails cadastrados como usuários de teste conseguem entrar.
+
+---
+
 ## Tecnologias
 
 - Java 17+, JavaFX 21
@@ -55,9 +81,10 @@ src/main/java/
 ├── db/           DatabaseManager — conexão, criação das tabelas e migrações de esquema
 ├── model/        entidades (Receita, Despesa, …) e tipos de apoio (Dinheiro, Periodo, Meses, Progresso)
 ├── repository/   acesso ao banco (SQL)
-├── service/      ControleFinanceiro (fachada usada pelas telas), ImportacaoCsv, CalculadoraXp, Conversor
+├── service/      ControleFinanceiro (fachada por usuário), Autenticacao, Senhas, GoogleOAuth, ImportacaoCsv, CalculadoraXp, Conversor
 └── ui/           App, Launcher e telas JavaFX
     ├── cadastros/   uma classe por aba (AbaReceitas, AbaDespesas, …) sobre a base comum AbaCrud
+    ├── login/       tela de login/cadastro e fluxo do Google
     ├── home/, resumo/
     └── components/  NavBar, DonutChart e Ui (fábricas de campos, colunas e diálogos)
 src/main/resources/css/dark-theme.css
@@ -110,7 +137,7 @@ Ao lançar uma versão nova, suba a `<version>` no `pom.xml` (ela vira a versão
 
 ## Banco de dados
 
-O banco fica em **`<pasta do usuário>/ControleFinanceiro/controle_financeiro.db`** (no Windows, `C:\Users\<você>\ControleFinanceiro\`), seja rodando pelo instalador, pelo JAR ou pela IDE. O caminho aparece no canto superior direito do app, com um botão **Abrir pasta**. Na primeira execução, se essa pasta ainda não tiver banco e existir um `controle_financeiro.db` na pasta atual (versões antigas gravavam ali), ele é **copiado** para lá; o original não é apagado.
+O banco fica em **`<pasta do usuário>/ControleFinanceiro/controle_financeiro.db`** (no Windows, `C:\Users\<você>\ControleFinanceiro\`), seja rodando pelo instalador, pelo JAR ou pela IDE. O botão **Pasta de dados** (canto superior direito) abre essa pasta; o caminho completo aparece ao passar o mouse sobre ele. Na primeira execução, se essa pasta ainda não tiver banco e existir um `controle_financeiro.db` na pasta atual (versões antigas gravavam ali), ele é **copiado** para lá; o original não é apagado.
 
 Para guardar os dados em outro lugar, defina a variável de ambiente `CONTROLE_FINANCEIRO_PASTA` com a pasta desejada.
 
@@ -126,7 +153,7 @@ O arquivo contém seus dados pessoais e **não é versionado** (está no `.gitig
 | `lancamentos_fixos`     | Lançamentos recorrentes                            |
 | `aplicacoes_fixos`      | Em quais meses cada fixo já foi aplicado           |
 | `mapeamentos_descricao` | Regras aprendidas na importação de CSV             |
-| `usuarios`              | Perfil exibido na Home                             |
+| `usuarios`              | Usuários: nome, usuário, e-mail, nascimento, hash da senha, id Google |
 
 As chaves estrangeiras são verificadas (`foreign_keys` ligado), então não é possível gravar lançamentos com conta ou categoria inexistente. Valores ficam em colunas `REAL` com 2 casas decimais e datas em texto `aaaa-mm-dd`; o mês e o ano de cada lançamento são derivados da data.
 
@@ -136,6 +163,7 @@ As chaves estrangeiras são verificadas (`foreign_keys` ligado), então não é 
 |--------|-------------------------------------------------------------------------------------------|
 | 1      | Remove as colunas `mes`/`ano` de receitas, despesas e investimentos (derivadas da data) e as colunas de XP de `usuarios` (XP passou a ser calculado) |
 | 2      | Adiciona `saldo_inicial` em `contas` (zero para as contas existentes)                     |
+| 3      | Login: colunas de acesso em `usuarios`; `usuario_id` em contas, categorias e mapeamentos (nomes únicos por usuário). Os dados existentes ficam com o perfil antigo, que ganha acesso na tela de login |
 
 Depois de migrado, o banco não abre mais em versões antigas do app — use o backup se precisar voltar.
 

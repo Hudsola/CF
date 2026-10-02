@@ -23,9 +23,18 @@ import java.util.*;
 /** Importação de extratos CSV como despesas, com aprendizado de categorias por descrição. */
 public class ImportacaoCsv {
 
-    private final CategoriaRepository categoriaRepo = new CategoriaRepository();
-    private final DespesaRepository despesaRepo = new DespesaRepository();
-    private final MapeamentoRepository mapeamentoRepo = new MapeamentoRepository();
+    private final CategoriaRepository categoriaRepo;
+    private final DespesaRepository despesaRepo;
+    private final MapeamentoRepository mapeamentoRepo;
+    private final repository.ContaRepository contaRepo;
+
+    /** Lê e grava somente dados do usuário informado. */
+    public ImportacaoCsv(int usuarioId) {
+        this.categoriaRepo = new CategoriaRepository(usuarioId);
+        this.despesaRepo = new DespesaRepository(usuarioId);
+        this.mapeamentoRepo = new MapeamentoRepository(usuarioId);
+        this.contaRepo = new repository.ContaRepository(usuarioId);
+    }
 
     /**
      * Lê um extrato CSV (ex: fatura do Nubank: date,title,amount) e monta o preview da importação.
@@ -86,9 +95,14 @@ public class ImportacaoCsv {
      */
     public int confirmar(List<LinhaImportacao> linhas, int contaId) {
         List<LinhaImportacao> selecionadas = linhas.stream().filter(LinhaImportacao::isImportar).toList();
+        if (!contaRepo.pertence(contaId)) throw new IllegalArgumentException("Conta inválida. Selecione uma das suas contas.");
+        Set<Integer> minhasCategorias = new HashSet<>();
+        categoriaRepo.listarTodos().forEach(c -> minhasCategorias.add(c.getId()));
         for (LinhaImportacao li : selecionadas) {
             if (li.getCategoria() == null)
                 throw new IllegalArgumentException("\"" + li.getTitulo() + "\" está sem categoria.");
+            if (!minhasCategorias.contains(li.getCategoria().getId()))
+                throw new IllegalArgumentException("\"" + li.getTitulo() + "\" está com uma categoria inválida.");
             if (li.getValor().signum() <= 0)
                 throw new IllegalArgumentException("\"" + li.getTitulo() + "\" tem valor negativo ou zero e não pode virar despesa.");
             if (li.getDetalhe() == null || li.getDetalhe().isBlank())

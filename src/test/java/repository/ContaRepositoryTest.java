@@ -11,10 +11,13 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class ContaRepositoryTest {
 
-    private final ContaRepository repo = new ContaRepository();
+    private int usuarioId;
+
+    private ContaRepository repo;
 
     @BeforeEach
-    void setUp() { DatabaseTestHelper.setup(); }
+    void setUp() { usuarioId = DatabaseTestHelper.setup();
+        repo = new ContaRepository(usuarioId); }
 
     @Test
     @Order(1)

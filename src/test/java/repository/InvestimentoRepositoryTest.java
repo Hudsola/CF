@@ -15,13 +15,17 @@ import static util.Assercoes.v;
 
 class InvestimentoRepositoryTest {
 
-    private final InvestimentoRepository repo      = new InvestimentoRepository();
-    private final ContaRepository        contaRepo = new ContaRepository();
+    private int usuarioId;
+
+    private InvestimentoRepository repo;
+    private ContaRepository        contaRepo;
     private int contaId;
 
     @BeforeEach
     void setUp() {
-        DatabaseTestHelper.setup();
+        usuarioId = DatabaseTestHelper.setup();
+        repo = new InvestimentoRepository(usuarioId);
+        contaRepo = new ContaRepository(usuarioId);
         contaRepo.salvar(new Conta("XP"));
         contaId = contaRepo.listarTodos().get(0).getId();
     }

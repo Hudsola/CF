@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.controlefinanceiro</groupId>
     <artifactId>controle-financeiro</artifactId>
-    <version>1.2.0</version>
+    <version>1.4.0</version>
     <packaging>jar</packaging>
     <name>Controle Financeiro Pessoal</name>
     <description>Sistema de controle financeiro pessoal com JavaFX e SQLite</description>
@@ -37,6 +37,12 @@
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>
             <version>${sqlite.version}</version>
+        </dependency>
+        <!-- Leitura das respostas JSON do login com Google -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.11.0</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

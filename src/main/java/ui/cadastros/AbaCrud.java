@@ -5,6 +5,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.*;
 import service.ControleFinanceiro;
@@ -85,6 +86,16 @@ abstract class AbaCrud<T> {
         return tabela.getSelectionModel().getSelectedItem();
     }
 
+    /** Todas as linhas selecionadas (Ctrl+clique, Shift+clique ou Ctrl+A), na ordem da tabela. */
+    protected List<T> selecionados() {
+        return new ArrayList<>(tabela.getSelectionModel().getSelectedItems());
+    }
+
+    /** Texto da confirmação quando há várias linhas selecionadas, ex: "as 5 despesas selecionadas". */
+    protected String descreverVarios(List<T> itens) {
+        return "os " + itens.size() + " registros selecionados";
+    }
+
     private VBox montar() {
         VBox aba = new VBox(12);
         aba.setPadding(new Insets(16));
@@ -109,9 +120,15 @@ abstract class AbaCrud<T> {
         btnExcluir.setOnAction(e -> excluirSelecionado());
 
         configurarColunas(tabela);
+        tabela.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         tabela.setOnMouseClicked(e -> {
             if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() == 2) editarSelecionado();
         });
+        tabela.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.DELETE) excluirSelecionado();
+        });
+        btnExcluir.setTooltip(new Tooltip("Exclui todas as linhas selecionadas (tecla Delete).\n"
+                + "Ctrl+clique ou Shift+clique para selecionar várias; Ctrl+A seleciona todas."));
 
         HBox esquerda = new HBox(10, btnSalvar, btnCancelar, lblMsg);
         esquerda.setAlignment(Pos.CENTER_LEFT);
@@ -153,6 +170,10 @@ abstract class AbaCrud<T> {
     private void editarSelecionado() {
         T sel = selecionado();
         if (sel == null) { erro("Selecione um item na tabela."); return; }
+        if (tabela.getSelectionModel().getSelectedItems().size() > 1) {
+            erro("Selecione apenas uma linha para editar.");
+            return;
+        }
         emEdicao = sel;
         recarregarOpcoes();
         preencherFormulario(sel);
@@ -163,16 +184,35 @@ abstract class AbaCrud<T> {
     }
 
     private void excluirSelecionado() {
-        T sel = selecionado();
-        if (sel == null) { erro("Selecione um item na tabela."); return; }
-        if (!Ui.confirmarExclusao(descrever(sel))) return;
-        try {
-            excluir(sel);
-            if (sel == emEdicao) sairDaEdicao(false);
-            recarregarTabela();
-            sucesso("Excluído.");
-        } catch (Exception ex) {
-            erro(ex.getMessage());
+        List<T> itens = selecionados();
+        if (itens.isEmpty()) { erro("Selecione um ou mais itens na tabela."); return; }
+        String oQue = itens.size() == 1 ? descrever(itens.get(0)) : descreverVarios(itens);
+        if (!Ui.confirmarExclusao(oQue)) return;
+        excluirItens(itens);
+    }
+
+    /**
+     * Exclui cada item; os que não puderem ser excluídos (ex: conta com lançamentos) são informados
+     * na mensagem, sem impedir a exclusão dos demais.
+     */
+    void excluirItens(List<T> itens) {
+        int excluidos = 0;
+        List<String> falhas = new ArrayList<>();
+        for (T item : itens) {
+            try {
+                excluir(item);
+                excluidos++;
+                if (item.equals(emEdicao)) sairDaEdicao(false);
+            } catch (Exception ex) {
+                falhas.add(ex.getMessage());
+            }
+        }
+        recarregarTabela();
+        if (falhas.isEmpty()) {
+            sucesso(excluidos == 1 ? "Excluído." : excluidos + " registros excluídos.");
+        } else {
+            erro((excluidos > 0 ? excluidos + " excluído(s); " : "") + falhas.size() + " não excluído(s): "
+                    + falhas.get(0) + (falhas.size() > 1 ? " (e outros)" : ""));
         }
     }
 

@@ -17,14 +17,16 @@ import static util.Assercoes.v;
 
 class ControleFinanceiroTest {
 
+    private int usuarioId;
+
     private ControleFinanceiro cf;
     private int contaId;
     private int catId;
 
     @BeforeEach
     void setUp() {
-        DatabaseTestHelper.setup();
-        cf = new ControleFinanceiro();
+        usuarioId = DatabaseTestHelper.setup();
+        cf = new ControleFinanceiro(usuarioId);
         cf.salvarConta(new Conta("Nubank"));
         contaId = cf.getContas().get(0).getId();
         catId = categoria("Moradia");

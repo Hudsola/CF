@@ -9,7 +9,7 @@ import service.ControleFinanceiro;
 /** Tela "Cadastros": uma aba por tipo de registro. Cada aba recarrega seus dados ao ser selecionada. */
 public class CadastrosView {
 
-    private final ControleFinanceiro cf = new ControleFinanceiro();
+    private final ControleFinanceiro cf = ui.Sessao.financeiro();
 
     public VBox getView() {
         TabPane tabs = new TabPane();

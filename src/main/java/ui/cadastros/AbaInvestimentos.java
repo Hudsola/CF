@@ -68,4 +68,8 @@ class AbaInvestimentos extends AbaCrud<Investimento> {
     @Override protected void salvarAlteracao(Investimento original) { cf.atualizarInvestimento(lerFormulario(original.getId())); }
     @Override protected void excluir(Investimento i) { cf.excluirInvestimento(i.getId()); }
     @Override protected String descrever(Investimento i) { return "o investimento \"" + i.getTipo() + "\""; }
+    @Override protected String descreverVarios(List<Investimento> itens) {
+        return "os " + itens.size() + " investimentos selecionados (total "
+                + Dinheiro.formatar(itens.stream().map(Investimento::getValor).reduce(Dinheiro.ZERO, java.math.BigDecimal::add)) + ")";
+    }
 }
