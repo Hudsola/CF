@@ -9,11 +9,16 @@ on:
 jobs:
 
   # ─────────────────────────────────────────────
-  # JOB 1: Testes + Cobertura
+  # JOB 1: Testes (inclusive de interface, sem janela), cobertura e SpotBugs
+  # Roda no Linux e no Windows (o app é usado principalmente no Windows)
   # ─────────────────────────────────────────────
   test:
-    name: Testes & Cobertura (JaCoCo)
-    runs-on: ubuntu-latest
+    name: Testes, Cobertura e SpotBugs (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout do código
@@ -26,22 +31,32 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Testes, relatório de cobertura e verificação do mínimo de 70%
+      # Testes (TestFX roda as telas com o Monocle, sem precisar de tela), mínimo de 70% de cobertura
+      # de linhas no projeto inteiro e SpotBugs sem achados
+      - name: Testes, cobertura e análise estática
         run: mvn verify --no-transfer-progress
 
       - name: Upload relatório JaCoCo
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: jacoco-report
+          name: jacoco-report-${{ runner.os }}
           path: target/site/jacoco/
           retention-days: 14
 
+      - name: Upload relatórios dos testes (em caso de falha)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: surefire-reports-${{ runner.os }}
+          path: target/surefire-reports/
+          retention-days: 14
+
   # ─────────────────────────────────────────────
-  # JOB 2: Build do JAR
+  # JOB 2: Build do JAR + smoke test (o JAR abre e todas as telas carregam)
   # ─────────────────────────────────────────────
   build:
-    name: Build (Fat JAR)
+    name: Build (Fat JAR) + Smoke Test
     needs: test
     runs-on: ubuntu-latest
 
@@ -59,6 +74,11 @@ jobs:
       - name: Build do JAR (skip testes — já rodaram no job anterior)
         run: mvn package -DskipTests --no-transfer-progress
 
+      # --smoke-test: banco temporário, cria um usuário, abre todas as telas e sai (0 = ok)
+      - name: Smoke test do JAR
+        timeout-minutes: 5
+        run: xvfb-run -a java -jar target/controle-financeiro-*.jar --smoke-test
+
       - name: Upload do JAR
         uses: actions/upload-artifact@v4
         with:
@@ -67,11 +87,11 @@ jobs:
           retention-days: 14
 
   # ─────────────────────────────────────────────
-  # JOB 3: Empacotamento nativo (jpackage)
+  # JOB 3: Empacotamento nativo (jpackage) + smoke test do app empacotado
   # Roda apenas em push para main
   # ─────────────────────────────────────────────
   package:
-    name: Executável Nativo (jpackage)
+    name: Executável Nativo (jpackage) - ${{ matrix.os }}
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
@@ -94,6 +114,30 @@ jobs:
       # conforme o sistema do runner. O runner Windows do GitHub já vem com o WiX Toolset.
       - name: Gerar instalador (jpackage)
         run: mvn clean package -Pinstalador -DskipTests --no-transfer-progress
+
+      # Linux: instala o .deb de verdade e abre o app instalado
+      - name: Smoke test do instalador (.deb)
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: |
+          sudo apt-get install -y ./target/dist/*.deb
+          xvfb-run -a /opt/controlefinanceiro/bin/ControleFinanceiro --smoke-test
+
+      # macOS: monta o .dmg e abre o app de dentro dele
+      - name: Smoke test do instalador (.dmg)
+        if: runner.os == 'macOS'
+        timeout-minutes: 5
+        run: |
+          hdiutil attach target/dist/*.dmg -mountpoint /Volumes/ControleFinanceiro -nobrowse
+          /Volumes/ControleFinanceiro/ControleFinanceiro.app/Contents/MacOS/ControleFinanceiro --smoke-test
+          hdiutil detach /Volumes/ControleFinanceiro
+
+      # Windows: o .exe é um instalador interativo; testa o JAR que vai dentro dele
+      - name: Smoke test do JAR empacotado (Windows)
+        if: runner.os == 'Windows'
+        timeout-minutes: 5
+        shell: bash
+        run: java -jar target/jpackage-input/controle-financeiro-*.jar --smoke-test
 
       - name: Upload do executável nativo
         uses: actions/upload-artifact@v4

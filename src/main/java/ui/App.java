@@ -23,6 +23,8 @@ public class App extends Application {
     public void start(Stage stage) {
         instancia = this;
         primaryStage = stage;
+        boolean smokeTest = getParameters().getRaw().contains(SmokeTest.ARGUMENTO);
+        if (smokeTest) SmokeTest.prepararBanco();
         try {
             DatabaseManager.inicializar();
         } catch (RuntimeException e) {
@@ -44,6 +46,7 @@ public class App extends Application {
         stage.setMinHeight(600);
         mostrarLogin();
         stage.show();
+        if (smokeTest) SmokeTest.executar();
     }
 
     /** Tela inicial: nada dos dados financeiros é mostrado antes do login. */
@@ -66,6 +69,7 @@ public class App extends Application {
             case "home" -> root.setCenter(new HomeView().getView());
             case "cadastros" -> root.setCenter(new ui.cadastros.CadastrosView().getView());
             case "resumo"    -> root.setCenter(new ui.resumo.ResumoView().getView());
+            default -> throw new IllegalArgumentException("Tela desconhecida: " + tela);
         }
     }
 

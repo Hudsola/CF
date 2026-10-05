@@ -63,27 +63,24 @@ public class CategoriaRepository {
 
     public void excluir(int id) {
         if (!pertence(id)) throw new RuntimeException("Categoria não encontrada com ID " + id);
+        if (Consultas.existe("SELECT 1 FROM despesas WHERE categoria_id=?", id))
+            throw new RuntimeException("Não é possível excluir: existem despesas vinculadas a essa categoria.");
+        if (Consultas.existe("SELECT 1 FROM lancamentos_fixos WHERE tipo='DESPESA' AND categoria_id=?", id))
+            throw new RuntimeException("Não é possível excluir: existem lançamentos fixos usando essa categoria.");
         try (Connection conn = DatabaseManager.getConnection()) {
-            PreparedStatement check = conn.prepareStatement("SELECT COUNT(*) FROM despesas WHERE categoria_id=?");
-            check.setInt(1, id);
-            ResultSet rs = check.executeQuery();
-            if (rs.next() && rs.getInt(1) > 0)
-                throw new RuntimeException("Não é possível excluir: existem despesas vinculadas a essa categoria.");
-            PreparedStatement checkFixo = conn.prepareStatement(
-                    "SELECT COUNT(*) FROM lancamentos_fixos WHERE tipo='DESPESA' AND categoria_id=?");
-            checkFixo.setInt(1, id);
-            ResultSet rsFixo = checkFixo.executeQuery();
-            if (rsFixo.next() && rsFixo.getInt(1) > 0)
-                throw new RuntimeException("Não é possível excluir: existem lançamentos fixos usando essa categoria.");
             // Mapeamentos de importação apontam para a categoria; sem ela não servem mais.
             conn.setAutoCommit(false);
-            PreparedStatement delMap = conn.prepareStatement("DELETE FROM mapeamentos_descricao WHERE categoria_id=?");
-            delMap.setInt(1, id);
-            delMap.executeUpdate();
-            PreparedStatement del = conn.prepareStatement("DELETE FROM categorias WHERE id=? AND usuario_id=?");
-            del.setInt(1, id); del.setInt(2, usuarioId);
-            del.executeUpdate();
-            conn.commit();
+            try (PreparedStatement delMap = conn.prepareStatement("DELETE FROM mapeamentos_descricao WHERE categoria_id=?");
+                 PreparedStatement del = conn.prepareStatement("DELETE FROM categorias WHERE id=? AND usuario_id=?")) {
+                delMap.setInt(1, id);
+                delMap.executeUpdate();
+                del.setInt(1, id); del.setInt(2, usuarioId);
+                del.executeUpdate();
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao excluir categoria: " + e.getMessage(), e);
         }

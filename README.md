@@ -69,8 +69,8 @@ Ao clicar, o app abre o navegador na página de login do Google e recebe o retor
 - Java 17+, JavaFX 21
 - SQLite via [sqlite-jdbc](https://github.com/xerial/sqlite-jdbc)
 - Maven (build, JAR executável, empacotamento nativo com `jpackage`)
-- JUnit 5 + JaCoCo (cobertura mínima de 70% fora da camada de interface)
-- GitHub Actions (testes, JAR e instaladores para Windows, Linux e macOS)
+- JUnit 5, TestFX (telas) + JaCoCo (cobertura mínima de 70%) e SpotBugs
+- GitHub Actions (testes no Linux e Windows, JAR e instaladores com smoke test) e Dependabot
 
 ---
 
@@ -174,8 +174,16 @@ Para inspecionar o banco: [DB Browser for SQLite](https://sqlitebrowser.org). Fe
 ## Testes
 
 ```bash
-mvn verify    # testes + relatório e verificação de cobertura (target/site/jacoco/index.html)
+mvn verify    # testes + cobertura (target/site/jacoco/index.html) + SpotBugs
 ```
+
+- **Unitários e de integração** (JUnit 5): regras de negócio, repositórios com SQLite real, migrações, login, importação CSV, fotos
+- **Interface** (TestFX): login, cadastro, navegação e cadastros pelas telas. Rodam sem abrir janelas (Monocle); para vê-las no Windows: `mvn test -Dtestfx.headless=false -Dglass.platform=win`
+- **Cobertura**: o build falha abaixo de 70% das linhas do projeto inteiro (JaCoCo)
+- **Análise estática** (SpotBugs): o build falha se houver achados; exceções justificadas em `spotbugs-exclude.xml`
+- **Smoke test** do app empacotado: `java -jar target/controle-financeiro-<versão>.jar --smoke-test` abre o app com um banco temporário, entra com um usuário de teste, percorre todas as telas e sai com código 0 (ou 1 se algo falhar)
+
+No GitHub Actions os testes rodam no Linux e no Windows; o JAR e os instaladores (.deb e .dmg instalados de verdade) passam pelo smoke test. O Dependabot abre PRs semanais com atualizações de dependências.
 
 ---
 

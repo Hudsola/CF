@@ -70,4 +70,34 @@ class FotoPerfilTest {
         FotoPerfil.baixarGoogle(1, "http://inseguro/foto.png");
         assertTrue(FotoPerfil.arquivo(1).isEmpty());
     }
+
+    @Test
+    void recusaArquivoSemExtensaoEMaiorQue10Mb() throws Exception {
+        Path semExtensao = Files.write(pasta.resolve("foto"), new byte[]{1});
+        assertThrows(IllegalArgumentException.class, () -> FotoPerfil.salvarEnviada(1, semExtensao));
+
+        Path grande = pasta.resolve("grande.png");
+        try (var f = new java.io.RandomAccessFile(grande.toFile(), "rw")) { f.setLength(FotoPerfil.TAMANHO_MAXIMO + 1); }
+        var ex = assertThrows(IllegalArgumentException.class, () -> FotoPerfil.salvarEnviada(1, grande));
+        assertTrue(ex.getMessage().contains("10 MB"));
+        assertTrue(FotoPerfil.arquivo(1).isEmpty());
+    }
+
+    @Test
+    void arquivoDeOrigemInexistenteGeraErroAmigavel() {
+        var ex = assertThrows(IllegalStateException.class, () -> FotoPerfil.salvarEnviada(1, pasta.resolve("sumiu.png")));
+        assertTrue(ex.getMessage().startsWith("Não foi possível salvar a foto"));
+    }
+
+    @Test
+    void removerSemFotoNaoDaErro() {
+        assertDoesNotThrow(() -> FotoPerfil.removerEnviada(1));
+    }
+
+    @Test
+    void falhaAoBaixarFotoDoGoogleEhIgnorada() {
+        assertDoesNotThrow(() -> FotoPerfil.baixarGoogle(1, "https://127.0.0.1:1/foto.png"));
+        assertDoesNotThrow(() -> FotoPerfil.baixarGoogle(1, "https://endereco inválido"));
+        assertTrue(FotoPerfil.arquivo(1).isEmpty());
+    }
 }

@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.controlefinanceiro</groupId>
     <artifactId>controle-financeiro</artifactId>
-    <version>1.5.0</version>
+    <version>1.5.1</version>
     <packaging>jar</packaging>
     <name>Controle Financeiro Pessoal</name>
     <description>Sistema de controle financeiro pessoal com JavaFX e SQLite</description>
@@ -15,6 +15,10 @@
         <sqlite.version>3.47.1.0</sqlite.version>
         <junit.version>5.10.2</junit.version>
         <jacoco.version>0.8.11</jacoco.version>
+        <testfx.version>4.0.18</testfx.version>
+        <spotbugs.version>4.8.6.6</spotbugs.version>
+        <testfx.headless>true</testfx.headless>
+        <glass.platform>Monocle</glass.platform>
         <main.class>ui.Launcher</main.class>
     </properties>
     <dependencies>
@@ -50,6 +54,20 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- Testes de interface: TestFX dirige as telas; o Monocle roda o JavaFX sem janela (headless) -->
+        <dependency>
+            <groupId>org.testfx</groupId>
+            <artifactId>testfx-junit5</artifactId>
+            <version>${testfx.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testfx</groupId>
+            <artifactId>openjfx-monocle</artifactId>
+            <!-- 17.x: a 21.x do Monocle é compilada para Java 21, e o projeto usa Java 17 -->
+            <version>17.0.10</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -80,6 +98,19 @@
                     <includes>
                         <include>**/*Test.java</include>
                     </includes>
+                    <!-- Testes no classpath: o TestFX e o Monocle precisam acessar classes internas do JavaFX -->
+                    <useModulePath>false</useModulePath>
+                    <!-- Telas sem abrir janelas (no CI e localmente). Para ver as telas no Windows:
+                         mvn test -Dtestfx.headless=false -Dglass.platform=win -->
+                    <systemPropertyVariables>
+                        <testfx.headless>${testfx.headless}</testfx.headless>
+                        <testfx.robot>glass</testfx.robot>
+                        <glass.platform>${glass.platform}</glass.platform>
+                        <monocle.platform>Headless</monocle.platform>
+                        <prism.order>sw</prism.order>
+                        <prism.text>t2k</prism.text>
+                        <java.awt.headless>true</java.awt.headless>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
             <plugin>
@@ -105,13 +136,7 @@
                         <phase>verify</phase>
                         <goals><goal>check</goal></goals>
                         <configuration>
-                            <excludes>
-                                <exclude>ui/**</exclude>
-                                <exclude>ui/cadastros/**</exclude>
-                                <exclude>ui/home/**</exclude>
-                                <exclude>ui/resumo/**</exclude>
-                                <exclude>ui/components/**</exclude>
-                            </excludes>
+                            <!-- Vale para o projeto inteiro, inclusive as telas (testadas com TestFX) -->
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>
@@ -125,6 +150,24 @@
                                 </rule>
                             </rules>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Análise estática de bugs (mvn verify falha se encontrar algum; relatório: mvn spotbugs:gui) -->
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>${spotbugs.version}</version>
+                <configuration>
+                    <effort>Max</effort>
+                    <threshold>Medium</threshold>
+                    <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>spotbugs</id>
+                        <phase>verify</phase>
+                        <goals><goal>check</goal></goals>
                     </execution>
                 </executions>
             </plugin>

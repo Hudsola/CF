@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Regras do SpotBugs desligadas por não se aplicarem a este projeto (ver o motivo em cada uma). -->
+<FindBugsFilter>
+    <!--
+        "Pode expor a representação interna": no JavaFX, telas devolvem os próprios nós e os modelos de
+        tabela devolvem as próprias propriedades de propósito (é assim que a interface se liga a eles).
+        Os records de resultado só circulam dentro do app. Não há código de terceiros para se proteger.
+    -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,MS_EXPOSE_REP"/>
+    </Match>
+
+    <!--
+        O JavaFX cria uma única instância de App e chama start() uma vez; o App guarda a janela e a raiz
+        em campos estáticos para as telas navegarem (App.navegarPara).
+    -->
+    <Match>
+        <Class name="ui.App"/>
+        <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"/>
+    </Match>
+</FindBugsFilter>

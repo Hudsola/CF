@@ -100,7 +100,7 @@ public final class FotoPerfil {
     }
 
     private static String extensao(Path p) {
-        String nome = p.getFileName().toString();
+        String nome = String.valueOf(p.getFileName());
         int i = nome.lastIndexOf('.');
         return i < 0 ? "" : nome.substring(i + 1).toLowerCase(Locale.ROOT);
     }

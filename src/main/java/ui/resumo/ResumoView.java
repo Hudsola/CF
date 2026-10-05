@@ -33,7 +33,7 @@ public class ResumoView {
         List<Integer> anos = cf.anosDisponiveis();
         ComboBox<Integer> cbAno = new ComboBox<>();
         cbAno.getItems().addAll(anos);
-        cbAno.setValue(anos.isEmpty() ? LocalDate.now().getYear() : anos.get(anos.size() - 1));
+        cbAno.setValue(anos.isEmpty() ? Integer.valueOf(LocalDate.now().getYear()) : anos.get(anos.size() - 1));
         cbAno.getStyleClass().add("dark-combo");
 
         ComboBox<String> cbMes = new ComboBox<>();

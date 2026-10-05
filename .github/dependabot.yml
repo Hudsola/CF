@@ -1,0 +1,28 @@
+# Dependabot: abre PRs com atualizações das dependências (e alertas de segurança) toda semana.
+# Cada PR passa pelo CI antes de ser aceito.
+version: 2
+updates:
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      # JavaFX (controls, fxml, graphics) sobe sempre junto
+      javafx:
+        patterns: [ "org.openjfx:*" ]
+      testes:
+        patterns: [ "org.junit*", "org.testfx:*", "org.jacoco:*" ]
+      plugins-maven:
+        patterns: [ "org.apache.maven.plugins:*", "org.codehaus.mojo:*", "com.github.spotbugs:*" ]
+    ignore:
+      # O Monocle 21+ exige Java 21; o projeto usa Java 17
+      - dependency-name: "org.testfx:openjfx-monocle"
+        versions: [ ">=18" ]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"

@@ -209,7 +209,7 @@ public class DatabaseManager {
      */
     private static void migrar(Connection conn) throws SQLException {
         int versao;
-        try (ResultSet rs = conn.createStatement().executeQuery("PRAGMA user_version")) {
+        try (Statement s = conn.createStatement(); ResultSet rs = s.executeQuery("PRAGMA user_version")) {
             versao = rs.next() ? rs.getInt(1) : 0;
         }
         if (versao >= VERSAO_ESQUEMA) return;
@@ -313,7 +313,7 @@ public class DatabaseManager {
     }
 
     private static boolean temColuna(Connection conn, String tabela, String coluna) throws SQLException {
-        try (ResultSet rs = conn.createStatement().executeQuery("PRAGMA table_info(" + tabela + ")")) {
+        try (Statement s = conn.createStatement(); ResultSet rs = s.executeQuery("PRAGMA table_info(" + tabela + ")")) {
             while (rs.next()) if (rs.getString("name").equalsIgnoreCase(coluna)) return true;
         }
         return false;
@@ -330,7 +330,7 @@ public class DatabaseManager {
         Path arquivo = Path.of(u.substring("jdbc:sqlite:".length()));
         if (!Files.exists(arquivo)) return;
         String sufixo = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
-        String nome = arquivo.getFileName().toString().replaceFirst("\\.db$", "");
+        String nome = String.valueOf(arquivo.getFileName()).replaceFirst("\\.db$", "");
         Path destino = arquivo.resolveSibling(nome + "-backup-v" + versao + "-" + sufixo + ".db");
         try {
             Files.copy(arquivo, destino, StandardCopyOption.COPY_ATTRIBUTES);

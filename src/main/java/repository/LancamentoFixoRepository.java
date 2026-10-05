@@ -69,15 +69,19 @@ public class LancamentoFixoRepository {
     public void excluir(int id) {
         try (Connection conn = DatabaseManager.getConnection()) {
             conn.setAutoCommit(false);
-            PreparedStatement p2 = conn.prepareStatement("DELETE FROM lancamentos_fixos WHERE id=?" + DO_USUARIO);
-            p2.setInt(1, id); p2.setInt(2, usuarioId);
-            if (p2.executeUpdate() == 0) {
+            try (PreparedStatement p2 = conn.prepareStatement("DELETE FROM lancamentos_fixos WHERE id=?" + DO_USUARIO);
+                 PreparedStatement p1 = conn.prepareStatement("DELETE FROM aplicacoes_fixos WHERE lancamento_fixo_id=?")) {
+                p2.setInt(1, id); p2.setInt(2, usuarioId);
+                if (p2.executeUpdate() == 0) {
+                    conn.rollback();
+                    throw new RuntimeException("Lançamento fixo não encontrado com ID " + id);
+                }
+                p1.setInt(1, id); p1.executeUpdate();
+                conn.commit();
+            } catch (SQLException e) {
                 conn.rollback();
-                throw new RuntimeException("Lançamento fixo não encontrado com ID " + id);
+                throw e;
             }
-            PreparedStatement p1 = conn.prepareStatement("DELETE FROM aplicacoes_fixos WHERE lancamento_fixo_id=?");
-            p1.setInt(1, id); p1.executeUpdate();
-            conn.commit();
         } catch (SQLException e) { throw new RuntimeException("Erro ao excluir lançamento fixo: " + e.getMessage(), e); }
     }
 
