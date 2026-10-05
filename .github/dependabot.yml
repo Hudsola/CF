@@ -17,6 +17,9 @@ updates:
       plugins-maven:
         patterns: [ "org.apache.maven.plugins:*", "org.codehaus.mojo:*", "com.github.spotbugs:*" ]
     ignore:
+      # JavaFX 22+ exige Java 21 ou mais novo; o projeto usa Java 17 (JavaFX 21 é LTS e segue recebendo correções)
+      - dependency-name: "org.openjfx:*"
+        versions: [ ">=22" ]
       # O Monocle 21+ exige Java 21; o projeto usa Java 17
       - dependency-name: "org.testfx:openjfx-monocle"
         versions: [ ">=18" ]

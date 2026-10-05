@@ -43,7 +43,7 @@ public class NavBar extends HBox {
         btnPasta.getStyleClass().add("btn-secondary");
         btnPasta.setTooltip(new Tooltip("Banco: " + arquivo + "\nCopie esse arquivo para fazer backup.\n"
                 + "Para abrir no DB Browser, feche o app antes de editar."));
-        btnPasta.setOnAction(e -> App.abrirNoSistema(arquivo.getParent()));
+        btnPasta.setOnAction(e -> App.abrirNoSistema(DatabaseManager.pastaDados()));
 
         Label lblUsuario = new Label(Sessao.ativa() ? "Olá, " + Sessao.usuario().getNome() : "");
         lblUsuario.getStyleClass().add("navbar-usuario");

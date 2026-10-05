@@ -19,6 +19,8 @@ public class DatabaseManager {
 
     private static String customUrl = null;
     private static Path arquivoPadrao = null;
+    /** Trava privada (não a da classe) para criar o caminho do banco uma única vez. */
+    private static final Object TRAVA_ARQUIVO = new Object();
 
     /** Versão do esquema gravada em PRAGMA user_version. Suba ao criar uma nova migração. */
     static final int VERSAO_ESQUEMA = 3;
@@ -36,21 +38,24 @@ public class DatabaseManager {
      * Fica fora da pasta do programa porque, instalado, o app não pode gravar em "Arquivos de Programas",
      * e assim os dados são os mesmos rodando pelo instalador, pelo JAR ou pela IDE.
      */
-    public static synchronized Path arquivoBanco() {
+    public static Path arquivoBanco() {
         if (customUrl != null) return Path.of(customUrl.replaceFirst("^jdbc:sqlite:", "")).toAbsolutePath();
-        if (arquivoPadrao == null) {
-            String env = System.getenv(VARIAVEL_PASTA);
-            Path pasta = env != null && !env.isBlank()
-                    ? Path.of(env)
-                    : Path.of(System.getProperty("user.home"), "ControleFinanceiro");
-            arquivoPadrao = prepararArquivo(pasta, Path.of("").toAbsolutePath());
+        synchronized (TRAVA_ARQUIVO) {
+            if (arquivoPadrao == null) {
+                String env = System.getenv(VARIAVEL_PASTA);
+                Path pasta = env != null && !env.isBlank()
+                        ? Path.of(env)
+                        : Path.of(System.getProperty("user.home"), "ControleFinanceiro");
+                arquivoPadrao = prepararArquivo(pasta, Path.of("").toAbsolutePath());
+            }
+            return arquivoPadrao;
         }
-        return arquivoPadrao;
     }
 
     /** Pasta onde ficam o banco e os arquivos de configuração (ex: google-oauth.json). */
     public static Path pastaDados() {
-        return arquivoBanco().getParent();
+        Path pasta = arquivoBanco().getParent();
+        return pasta != null ? pasta : Path.of("").toAbsolutePath();
     }
 
     /**

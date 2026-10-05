@@ -13,6 +13,14 @@ class PastaDadosTest {
     @TempDir Path dir;
 
     @Test
+    void pastaDadosEhAPastaDoBancoEmUso() {
+        Path banco = dir.resolve("sub").resolve("teste.db");
+        DatabaseManager.setUrl("jdbc:sqlite:" + banco);
+        assertEquals(banco.toAbsolutePath(), DatabaseManager.arquivoBanco());
+        assertEquals(banco.getParent().toAbsolutePath(), DatabaseManager.pastaDados());
+    }
+
+    @Test
     void deveCriarPastaDeDadosEApontarParaOBancoDentroDela() {
         Path dados = dir.resolve("ControleFinanceiro");
         Path banco = DatabaseManager.prepararArquivo(dados, dir.resolve("programa"));
