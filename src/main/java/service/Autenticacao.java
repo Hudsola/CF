@@ -19,7 +19,11 @@ public class Autenticacao {
     public record Cadastro(String nome, String usuario, String email, LocalDate nascimento, String senha) {}
 
     /** Dados devolvidos pelo Google após o login (ver {@link GoogleOAuth}). */
-    public record PerfilGoogle(String id, String email, boolean emailVerificado, String nome) {}
+    public record PerfilGoogle(String id, String email, boolean emailVerificado, String nome, String foto) {
+        public PerfilGoogle(String id, String email, boolean emailVerificado, String nome) {
+            this(id, email, emailVerificado, nome, null);
+        }
+    }
 
     private final UsuarioRepository repo = new UsuarioRepository();
 

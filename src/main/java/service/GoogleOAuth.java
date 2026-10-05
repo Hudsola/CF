@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 /**
  * Login com Google para app de desktop (OAuth 2.0 / OpenID Connect, "installed app"):
  * abre o navegador, recebe o retorno em http://127.0.0.1:&lt;porta&gt;/, troca o código por um token
- * (com PKCE) e lê nome, e-mail e identificador da conta.
+ * (com PKCE) e lê nome, e-mail, foto e identificador da conta.
  *
  * As credenciais do app (client_id/client_secret) vêm do arquivo JSON baixado no Google Cloud
  * ("OAuth client ID" do tipo "Desktop app"), salvo como {@value #ARQUIVO_CREDENCIAIS} na pasta de dados.
@@ -181,7 +181,8 @@ public class GoogleOAuth {
         JsonObject u = enviar(req, "ler o perfil");
         JsonElement verificado = u.get("email_verified");
         return new Autenticacao.PerfilGoogle(texto(u, "sub"), texto(u, "email"),
-                verificado != null && !verificado.isJsonNull() && verificado.getAsBoolean(), texto(u, "name"));
+                verificado != null && !verificado.isJsonNull() && verificado.getAsBoolean(), texto(u, "name"),
+                texto(u, "picture"));
     }
 
     private JsonObject enviar(HttpRequest req, String acao) throws IOException {

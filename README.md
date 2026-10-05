@@ -7,7 +7,7 @@ Aplicativo desktop de controle financeiro pessoal em **Java 17 + JavaFX**, com d
 ## Funcionalidades
 
 - **Login**: tela inicial com usuário/e-mail e senha ou **conta Google**; cada usuário só vê os próprios dados (contas, categorias, lançamentos, fixos, importações). Detalhes em [Login e usuários](#login-e-usuários)
-- **Home**: perfil editável (nome e nascimento), saldo geral, receitas/despesas/saldo do mês atual, **saldo por conta**, nível e XP, gráficos do mês e lançamentos fixos ativos
+- **Home**: painel do usuário no estilo do HUD do GTA San Andreas (foto de perfil enviada ou da conta Google, nome, idade, barra de XP e saldo geral), receitas/despesas/saldo do mês atual, **saldo por conta**, nível e XP, gráficos do mês e lançamentos fixos ativos
 - **Cadastros**: todas as abas têm cadastro, **edição** (botão Editar ou duplo clique na linha) e exclusão com confirmação — inclusive de **várias linhas de uma vez** (Ctrl+clique, Shift+clique ou Ctrl+A, e o botão Excluir ou a tecla Delete)
   - **Receitas, Despesas e Investimentos**; despesas com filtro por categoria, mês e ano e total do filtro
   - **Importar CSV** (aba Despesas): importa extratos/faturas (ex: Nubank `date,title,amount`) com preview editável

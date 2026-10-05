@@ -128,6 +128,82 @@
     -fx-font-weight: bold;
 }
 
+/* --- Painel do usuário (HUD do GTA San Andreas) ---
+   Valores: fonte do dinheiro do HUD (definida no código, ver Ui.FONTE_VALORES).
+   Textos: mesma fonte de .section-title ("Saldo por Conta"). */
+.hud-card {
+    -fx-border-color: #4A9EE8;
+    -fx-border-width: 2;
+}
+
+.hud-texto {
+    -fx-font-family: "Georgia", serif;
+    -fx-font-style: italic;
+    -fx-font-size: 15px;
+    -fx-text-fill: #c8c8c8;
+    -fx-effect: dropshadow(gaussian, #000000, 2, 1.0, 0, 0);
+}
+
+.hud-nome {
+    -fx-font-size: 22px;
+    -fx-text-fill: #e6e6e6;
+}
+
+.hud-inicial {
+    -fx-font-size: 40px;
+    -fx-text-fill: #e6e6e6;
+}
+
+/* contorno preto dos números, como no jogo */
+.hud-valor {
+    -fx-effect: dropshadow(gaussian, #000000, 3, 1.0, 0, 0);
+}
+
+.hud-idade {
+    -fx-font-size: 24px;
+    -fx-text-fill: #c8c8c8;
+}
+
+.hud-nivel {
+    -fx-font-size: 15px;
+    -fx-text-fill: #a9c9ee;
+}
+
+.hud-dinheiro {
+    -fx-font-size: 34px;
+}
+
+.hud-foto {
+    -fx-background-color: #000000;
+    -fx-border-color: #f2f2f2;
+    -fx-border-width: 3;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+}
+
+/* barra de XP no estilo da barra de saúde */
+.hud-barra-xp {
+    -fx-pref-height: 16px;
+    -fx-background-color: #000000;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-padding: 2;
+}
+
+.hud-barra-xp > .track {
+    -fx-background-color: #5a0c0e;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
+.hud-barra-xp > .bar {
+    -fx-background-color: #b4191d;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-padding: 5;
+}
+
 /* --- XP Block --- */
 .xp-block {
     -fx-background-color: #1a1a1a;

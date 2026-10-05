@@ -3,15 +3,17 @@ package ui.home;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import model.Usuario;
 import service.Autenticacao;
+import service.FotoPerfil;
 import ui.App;
 import ui.Sessao;
 import ui.components.Ui;
 import ui.login.FluxoGoogle;
 
-/** Perfil do usuário logado: nome, e-mail, nascimento, senha e vínculo com a conta Google. */
+/** Perfil do usuário logado: nome, e-mail, nascimento, foto, senha e vínculo com a conta Google. */
 final class PerfilDialog {
 
     private PerfilDialog() {}
@@ -92,7 +94,38 @@ final class PerfilDialog {
             google.getChildren().add(1, btnGoogle);
         }
 
-        VBox conteudo = new VBox(10, dados, lblErro, new Separator(), lblSenha, senha, btnSenha, lblMsgSenha,
+        // --- Foto ---
+        Label lblFoto = new Label("Foto de perfil");
+        lblFoto.getStyleClass().add("subsection-title");
+        Label lblMsgFoto = new Label(FotoPerfil.temFotoEnviada(u.getId()) ? "Usando a foto enviada por você."
+                : FotoPerfil.arquivo(u.getId()).isPresent() ? "Usando a foto da conta Google." : "Nenhuma foto.");
+        lblMsgFoto.setWrapText(true);
+        Button btnFoto = new Button("Escolher foto…");
+        btnFoto.getStyleClass().add("btn-info");
+        Button btnRemoverFoto = new Button("Remover foto enviada");
+        btnRemoverFoto.getStyleClass().add("btn-secondary");
+        btnRemoverFoto.setDisable(!FotoPerfil.temFotoEnviada(u.getId()));
+        btnFoto.setOnAction(e -> {
+            if (FotoUsuario.escolher(dialog.getDialogPane().getScene().getWindow(), u.getId())) {
+                alterou[0] = true;
+                btnRemoverFoto.setDisable(false);
+                Ui.mostrarMsg(lblMsgFoto, "Foto salva.", true);
+            }
+        });
+        btnRemoverFoto.setOnAction(e -> {
+            try {
+                FotoPerfil.removerEnviada(u.getId());
+                alterou[0] = true;
+                btnRemoverFoto.setDisable(true);
+                Ui.mostrarMsg(lblMsgFoto, FotoPerfil.arquivo(u.getId()).isPresent()
+                        ? "Foto removida: voltando para a foto da conta Google." : "Foto removida.", true);
+            } catch (RuntimeException ex) {
+                Ui.mostrarMsg(lblMsgFoto, ex.getMessage(), false);
+            }
+        });
+        VBox foto = new VBox(6, lblFoto, new HBox(8, btnFoto, btnRemoverFoto), lblMsgFoto);
+
+        VBox conteudo = new VBox(10, dados, lblErro, new Separator(), foto, new Separator(), lblSenha, senha, btnSenha, lblMsgSenha,
                 new Separator(), google);
         conteudo.setPadding(new Insets(10));
         conteudo.setPrefWidth(480);

@@ -14,6 +14,7 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import model.Usuario;
 import service.Autenticacao;
+import service.FotoPerfil;
 import service.GoogleOAuth;
 import ui.App;
 
@@ -72,7 +73,9 @@ public final class FluxoGoogle {
         Task<Usuario> tarefa = new Task<>() {
             @Override protected Usuario call() throws Exception {
                 Autenticacao.PerfilGoogle perfil = oauth.autenticar(App::abrirEndereco, Duration.ofMinutes(5));
-                return new Autenticacao().entrarComGoogle(perfil, vincularA);
+                Usuario usuario = new Autenticacao().entrarComGoogle(perfil, vincularA);
+                FotoPerfil.baixarGoogle(usuario.getId(), perfil.foto());
+                return usuario;
             }
         };
         tarefa.setOnSucceeded(e -> { espera.close(); sucesso.accept(tarefa.getValue()); });

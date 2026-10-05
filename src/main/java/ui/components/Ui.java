@@ -4,9 +4,12 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.text.Font;
 import javafx.util.StringConverter;
 import model.Dinheiro;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -22,7 +25,27 @@ public final class Ui {
 
     public static final DateTimeFormatter DATA_BR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+    /**
+     * Fonte dos valores do painel do usuário na Home (estilo HUD do GTA San Andreas): a Pricedown, se o
+     * arquivo estiver em resources/fonts, senão a Impact do Windows.
+     */
+    public static final String FONTE_VALORES = carregarFonte("/fonts/pricedown.otf", "Impact");
+
     private Ui() {}
+
+    private static String carregarFonte(String recurso, String reserva) {
+        try (InputStream in = Ui.class.getResourceAsStream(recurso)) {
+            Font f = in != null ? Font.loadFont(in, 12) : null;
+            return f != null ? f.getFamily() : reserva;
+        } catch (IOException e) {
+            return reserva;
+        }
+    }
+
+    /** Estilo inline que aplica {@link #FONTE_VALORES} (o nome da família só é conhecido depois de carregar). */
+    public static String estiloFonteValores() {
+        return "-fx-font-family: \"" + FONTE_VALORES + "\";";
+    }
 
     public static TextField campo(String prompt) {
         TextField tf = new TextField();
