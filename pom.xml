@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.controlefinanceiro</groupId>
     <artifactId>controle-financeiro</artifactId>
-    <version>1.4.0</version>
+    <version>1.5.0</version>
     <packaging>jar</packaging>
     <name>Controle Financeiro Pessoal</name>
     <description>Sistema de controle financeiro pessoal com JavaFX e SQLite</description>
