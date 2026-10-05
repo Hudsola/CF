@@ -37,7 +37,7 @@ jobs:
         run: mvn verify --no-transfer-progress
 
       - name: Upload relatório JaCoCo
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: jacoco-report-${{ runner.os }}
@@ -45,7 +45,7 @@ jobs:
           retention-days: 14
 
       - name: Upload relatórios dos testes (em caso de falha)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: surefire-reports-${{ runner.os }}
@@ -80,7 +80,7 @@ jobs:
         run: xvfb-run -a java -jar target/controle-financeiro-*.jar --smoke-test
 
       - name: Upload do JAR
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: controle-financeiro-jar
           path: target/controle-financeiro-*.jar
@@ -140,7 +140,7 @@ jobs:
         run: java -jar target/jpackage-input/controle-financeiro-*.jar --smoke-test
 
       - name: Upload do executável nativo
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: executavel-${{ runner.os }}
           path: target/dist/
