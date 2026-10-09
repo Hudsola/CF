@@ -39,6 +39,8 @@ final class SmokeTest {
     /** Com a janela já aberta: entra com um usuário novo e percorre as telas, uma a cada 300 ms. */
     static void executar() {
         try {
+            if (App.getStage().getIcons().size() != ui.components.Ui.TAMANHOS_ICONE.size())
+                throw new IllegalStateException("ícone do app ausente no pacote (resources/icons)");
             Usuario u = new Autenticacao().cadastrar(new Autenticacao.Cadastro(
                     "Smoke Test", "smoke", "smoke@teste.com", LocalDate.of(1990, 1, 1), "senha-do-smoke"));
             App.entrar(u);

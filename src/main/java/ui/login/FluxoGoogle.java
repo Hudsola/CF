@@ -17,6 +17,7 @@ import service.Autenticacao;
 import service.FotoPerfil;
 import service.GoogleOAuth;
 import ui.App;
+import ui.components.Ui;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -56,6 +57,7 @@ public final class FluxoGoogle {
 
         Stage espera = new Stage();
         espera.initOwner(dono);
+        Ui.comIcone(espera);
         espera.initModality(Modality.WINDOW_MODAL);
         espera.setTitle("Entrar com Google");
         Label msg = new Label("Conclua o login na janela do navegador que foi aberta…");

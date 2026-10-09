@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.controlefinanceiro</groupId>
     <artifactId>controle-financeiro</artifactId>
-    <version>1.5.2</version>
+    <version>1.5.3</version>
     <packaging>jar</packaging>
     <name>Controle Financeiro Pessoal</name>
     <description>Sistema de controle financeiro pessoal com JavaFX e SQLite</description>
@@ -247,7 +247,7 @@
                                 <goals><goal>exec</goal></goals>
                                 <configuration>
                                     <executable>jpackage</executable>
-                                    <commandlineArgs>--type ${jpackage.tipo} --input ${project.build.directory}/jpackage-input --dest ${project.build.directory}/dist --name ControleFinanceiro --app-version ${project.version} --vendor Hudsola --description "Controle financeiro pessoal" --main-jar ${project.build.finalName}.jar --main-class ${main.class} ${jpackage.args.so}</commandlineArgs>
+                                    <commandlineArgs>--type ${jpackage.tipo} --input ${project.build.directory}/jpackage-input --dest ${project.build.directory}/dist --name ControleFinanceiro --app-version ${project.version} --vendor Hudsola --description "Controle financeiro pessoal" --main-jar ${project.build.finalName}.jar --main-class ${main.class} --icon ${jpackage.icone} ${jpackage.args.so}</commandlineArgs>
                                 </configuration>
                             </execution>
                         </executions>
@@ -256,7 +256,8 @@
             </build>
         </profile>
 
-        <!-- Opções do jpackage por sistema operacional (ativadas automaticamente) -->
+        <!-- Opções do jpackage por sistema operacional (ativadas automaticamente).
+             Ícones em empacotamento/, gerados por: java ferramentas/GerarIcone.java -->
         <profile>
             <id>so-windows</id>
             <activation><os><family>windows</family></os></activation>
@@ -268,6 +269,7 @@
                     substitui a anterior em vez de duplicar. Nunca altere esse valor.
                 -->
                 <jpackage.args.so>--win-per-user-install --win-dir-chooser --win-shortcut --win-menu --win-menu-group ControleFinanceiro --win-upgrade-uuid 89538236-735b-49d8-beb2-622656fba504</jpackage.args.so>
+                <jpackage.icone>${project.basedir}/empacotamento/icone.ico</jpackage.icone>
             </properties>
         </profile>
         <profile>
@@ -276,6 +278,7 @@
             <properties>
                 <jpackage.tipo>deb</jpackage.tipo>
                 <jpackage.args.so>--linux-shortcut --linux-menu-group Office --linux-app-category office</jpackage.args.so>
+                <jpackage.icone>${project.basedir}/empacotamento/icone.png</jpackage.icone>
             </properties>
         </profile>
         <profile>
@@ -284,6 +287,7 @@
             <properties>
                 <jpackage.tipo>dmg</jpackage.tipo>
                 <jpackage.args.so>--mac-package-name ControleFinanceiro</jpackage.args.so>
+                <jpackage.icone>${project.basedir}/empacotamento/icone.icns</jpackage.icone>
             </properties>
         </profile>
     </profiles>

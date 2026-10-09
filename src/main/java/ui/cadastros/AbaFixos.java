@@ -68,6 +68,7 @@ class AbaFixos extends AbaCrud<LancamentoFixo> {
     private void abrirDialogoAplicar() {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Aplicar lançamentos fixos");
+        Ui.comIcone(dialog);
         dialog.setHeaderText("Cria as receitas, despesas e investimentos dos fixos ativos no período.\n"
                 + "Meses em que um fixo já foi aplicado são ignorados.");
 

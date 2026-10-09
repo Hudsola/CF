@@ -131,6 +131,8 @@ O instalador sai em `target/dist`: `.exe` no Windows (exige o [WiX Toolset 3](ht
 mvn clean package -Pinstalador -Djpackage.tipo=app-image "-Djpackage.args.so="
 ```
 
+O ícone do app ("CF" dourado na fonte do GTA) fica em `empacotamento/` (`.ico`, `.png` e `.icns`, usados pelo jpackage) e em `src/main/resources/icons/` (janela). Para mudá-lo, edite e rode `java ferramentas/GerarIcone.java`, que gera todos os arquivos.
+
 Ao lançar uma versão nova, suba a `<version>` no `pom.xml` (ela vira a versão do instalador). Não altere o `--win-upgrade-uuid` do perfil `so-windows`: é ele que faz a versão nova substituir a antiga.
 
 ---

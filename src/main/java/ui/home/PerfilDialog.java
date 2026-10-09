@@ -27,6 +27,7 @@ final class PerfilDialog {
         dialog.setTitle("Meu perfil");
         dialog.setHeaderText(u.getUsuario() != null ? "Usuário: " + u.getUsuario() : null);
         dialog.initOwner(App.getStage());
+        Ui.comIcone(dialog);
 
         // --- Dados pessoais ---
         TextField tfNome = new TextField(u.getNome());

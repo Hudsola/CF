@@ -5,6 +5,7 @@ import javafx.scene.image.Image;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import service.FotoPerfil;
+import ui.components.Ui;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -44,7 +45,7 @@ final class FotoUsuario {
     }
 
     private static void erro(String msg) {
-        Alert a = new Alert(Alert.AlertType.ERROR, msg);
+        Alert a = Ui.comIcone(new Alert(Alert.AlertType.ERROR, msg));
         a.setTitle("Foto de perfil");
         a.setHeaderText(null);
         a.showAndWait();

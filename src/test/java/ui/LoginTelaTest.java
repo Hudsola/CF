@@ -23,6 +23,20 @@ class LoginTelaTest extends TelaTestBase {
     }
 
     @Test
+    void janelaPrincipalEDialogosUsamOIconeDoApp() {
+        var icones = App.getStage().getIcons();
+        assertEquals(ui.components.Ui.TAMANHOS_ICONE.size(), icones.size());
+        assertTrue(icones.stream().anyMatch(i -> i.getWidth() == 256 && !i.isError()));
+
+        javafx.scene.control.Alert[] alerta = new javafx.scene.control.Alert[1];
+        interact(() -> alerta[0] = ui.components.Ui.comIcone(new javafx.scene.control.Alert(
+                javafx.scene.control.Alert.AlertType.INFORMATION, "teste")));
+        assertSame(App.getStage(), alerta[0].getOwner(), "diálogo preso à janela principal");
+        var janela = (javafx.stage.Stage) alerta[0].getDialogPane().getScene().getWindow();
+        assertEquals(icones.size(), janela.getIcons().size());
+    }
+
+    @Test
     void entrarComUsuarioESenhaAbreAHomeESairVoltaParaOLogin() throws Exception {
         preencher("Usuário ou e-mail", "ana");
         preencher("Senha", SENHA);

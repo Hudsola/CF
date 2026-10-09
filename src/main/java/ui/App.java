@@ -8,6 +8,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import model.Usuario;
 import ui.components.NavBar;
+import ui.components.Ui;
 import ui.home.HomeView;
 import ui.login.LoginView;
 
@@ -28,8 +29,8 @@ public class App extends Application {
         try {
             DatabaseManager.inicializar();
         } catch (RuntimeException e) {
-            Alert alerta = new Alert(Alert.AlertType.ERROR,
-                    e.getMessage() + "\n\nBanco: " + DatabaseManager.arquivoBanco());
+            Alert alerta = Ui.comIcone(new Alert(Alert.AlertType.ERROR,
+                    e.getMessage() + "\n\nBanco: " + DatabaseManager.arquivoBanco()));
             alerta.setTitle("Controle Financeiro");
             alerta.setHeaderText("Não foi possível abrir o banco de dados");
             alerta.showAndWait();
@@ -41,6 +42,7 @@ public class App extends Application {
         scene.getStylesheets().add(getClass().getResource("/css/dark-theme.css").toExternalForm());
 
         stage.setTitle("Controle Financeiro Pessoal");
+        stage.getIcons().setAll(Ui.icones());
         stage.setScene(scene);
         stage.setMinWidth(900);
         stage.setMinHeight(600);

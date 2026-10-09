@@ -46,6 +46,7 @@ class ImportacaoCsvDialog {
     void abrir(Stage owner) {
         stage.initModality(Modality.WINDOW_MODAL);
         stage.initOwner(owner);
+        Ui.comIcone(stage);
         stage.setTitle("Importar CSV — Despesas");
         stage.setMinWidth(980);
         stage.setMinHeight(600);
@@ -189,6 +190,7 @@ class ImportacaoCsvDialog {
             if (!erros.isEmpty()) {
                 Alert alerta = new Alert(Alert.AlertType.WARNING);
                 alerta.initOwner(stage);
+                Ui.comIcone(alerta);
                 alerta.setTitle("Linhas ignoradas");
                 alerta.setHeaderText(erros.size() + " linha(s) do CSV não puderam ser lidas:");
                 alerta.setContentText(String.join("\n", erros.subList(0, Math.min(15, erros.size())))

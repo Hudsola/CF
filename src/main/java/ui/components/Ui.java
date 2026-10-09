@@ -4,7 +4,9 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
 import javafx.scene.text.Font;
+import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import model.Dinheiro;
 
@@ -13,6 +15,8 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 
 /** Fábricas e utilitários de interface compartilhados pelas telas. */
@@ -40,6 +44,42 @@ public final class Ui {
         } catch (IOException e) {
             return reserva;
         }
+    }
+
+    /** Tamanhos do ícone do app em resources/icons (gerados por ferramentas/GerarIcone.java). */
+    public static final List<Integer> TAMANHOS_ICONE = List.of(16, 24, 32, 48, 64, 128, 256);
+
+    /** Ícone do app em vários tamanhos; o sistema escolhe o melhor para a barra de título e de tarefas. */
+    public static List<Image> icones() {
+        return Icones.LISTA;
+    }
+
+    /** Carregados uma única vez, no primeiro uso (a JVM garante a inicialização segura da classe). */
+    private static final class Icones {
+        static final List<Image> LISTA = carregar();
+
+        private static List<Image> carregar() {
+            List<Image> lista = new ArrayList<>();
+            for (int n : TAMANHOS_ICONE) {
+                var url = Ui.class.getResource("/icons/icone-" + n + ".png");
+                if (url != null) lista.add(new Image(url.toExternalForm()));
+            }
+            return List.copyOf(lista);
+        }
+    }
+
+    /** Põe o ícone do app numa janela secundária. */
+    public static <S extends Stage> S comIcone(S janela) {
+        janela.getIcons().setAll(icones());
+        return janela;
+    }
+
+    /** Diálogos: ficam presos à janela principal (se ainda não tiverem dono) e com o ícone do app. */
+    public static <D extends Dialog<?>> D comIcone(D dialogo) {
+        if (dialogo.getOwner() == null && ui.App.getStage() != null && ui.App.getStage().isShowing())
+            dialogo.initOwner(ui.App.getStage());
+        comIcone((Stage) dialogo.getDialogPane().getScene().getWindow());
+        return dialogo;
     }
 
     /** Estilo inline que aplica {@link #FONTE_VALORES} (o nome da família só é conhecido depois de carregar). */
@@ -89,7 +129,7 @@ public final class Ui {
     }
 
     public static boolean confirmar(String titulo, String mensagem) {
-        Alert alerta = new Alert(Alert.AlertType.CONFIRMATION, mensagem, ButtonType.YES, ButtonType.NO);
+        Alert alerta = comIcone(new Alert(Alert.AlertType.CONFIRMATION, mensagem, ButtonType.YES, ButtonType.NO));
         alerta.setTitle(titulo);
         alerta.setHeaderText(null);
         return alerta.showAndWait().filter(b -> b == ButtonType.YES).isPresent();
