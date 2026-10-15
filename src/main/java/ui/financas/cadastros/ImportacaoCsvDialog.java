@@ -1,4 +1,4 @@
-package ui.cadastros;
+package ui.financas.cadastros;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;

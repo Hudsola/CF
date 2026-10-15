@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Teste rápido do app empacotado (JAR ou instalador): {@code ControleFinanceiro --smoke-test}.
@@ -21,7 +23,14 @@ import java.time.LocalDate;
 final class SmokeTest {
 
     static final String ARGUMENTO = "--smoke-test";
-    private static final String[] TELAS = {"home", "cadastros", "resumo", "home"};
+    /** Todas as abas da barra (uma aba nova entra no teste sozinha) e de volta para a Home. */
+    private static final List<String> TELAS = telas();
+
+    private static List<String> telas() {
+        List<String> t = new ArrayList<>(ui.components.NavBar.ABAS.keySet());
+        t.add("home");
+        return List.copyOf(t);
+    }
 
     private SmokeTest() {}
 
@@ -53,12 +62,12 @@ final class SmokeTest {
     private static void proximaTela(int i) {
         PauseTransition pausa = new PauseTransition(Duration.millis(300));
         pausa.setOnFinished(e -> {
-            if (i == TELAS.length) {
+            if (i == TELAS.size()) {
                 System.out.println("SMOKE TEST OK: todas as telas abriram sem erro.");
                 Platform.exit();
                 System.exit(0);
             }
-            App.navegarPara(TELAS[i]);
+            App.navegarPara(TELAS.get(i));
             proximaTela(i + 1);
         });
         pausa.play();

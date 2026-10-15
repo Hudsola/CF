@@ -204,6 +204,29 @@
     -fx-padding: 5;
 }
 
+/* --- Home: cards de resumo das abas --- */
+.card-aba {
+    -fx-min-height: 150;
+}
+
+.card-linha-valor {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+/* abas ainda sem funcionalidades */
+.selo-em-breve {
+    -fx-background-color: #2a2412;
+    -fx-border-color: #E8A838;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+    -fx-text-fill: #E8A838;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 3 8 3 8;
+}
+
 /* --- XP Block --- */
 .xp-block {
     -fx-background-color: #1a1a1a;

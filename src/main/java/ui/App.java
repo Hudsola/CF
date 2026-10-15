@@ -7,10 +7,14 @@ import javafx.scene.control.Alert;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import model.Usuario;
+import ui.agenda.AgendaView;
 import ui.components.NavBar;
 import ui.components.Ui;
+import ui.estoque.EstoqueView;
+import ui.financas.FinancasView;
 import ui.home.HomeView;
 import ui.login.LoginView;
+import ui.missoes.MissoesView;
 
 import java.net.URI;
 
@@ -19,6 +23,8 @@ public class App extends Application {
     private static Stage primaryStage;
     private static BorderPane root;
     private static App instancia;
+    private static NavBar barra;
+    private static String telaAtual;
 
     @Override
     public void start(Stage stage) {
@@ -54,6 +60,8 @@ public class App extends Application {
     /** Tela inicial: nada dos dados financeiros é mostrado antes do login. */
     public static void mostrarLogin() {
         Sessao.encerrar();
+        barra = null;
+        telaAtual = null;
         root.setTop(null);
         root.setCenter(new LoginView(App::entrar).getView());
     }
@@ -61,23 +69,35 @@ public class App extends Application {
     /** Chamado pela tela de login quando o usuário se autentica. */
     public static void entrar(Usuario usuario) {
         Sessao.iniciar(usuario);
-        root.setTop(new NavBar());
+        barra = new NavBar();
+        root.setTop(barra);
         navegarPara("home");
     }
 
+    /** Abre uma das abas da barra: home, missoes, financas, agenda ou estoque. */
     public static void navegarPara(String tela) {
         if (!Sessao.ativa()) { mostrarLogin(); return; }
-        switch (tela) {
-            case "home" -> root.setCenter(new HomeView().getView());
-            case "cadastros" -> root.setCenter(new ui.cadastros.CadastrosView().getView());
-            case "resumo"    -> root.setCenter(new ui.resumo.ResumoView().getView());
+        root.setCenter(switch (tela) {
+            case "home" -> new HomeView().getView();
+            case "missoes" -> new MissoesView().getView();
+            case "financas" -> new FinancasView().getView();
+            case "agenda" -> new AgendaView().getView();
+            case "estoque" -> new EstoqueView().getView();
             default -> throw new IllegalArgumentException("Tela desconhecida: " + tela);
-        }
+        });
+        telaAtual = tela;
+        if (barra != null) barra.marcarAtivo(tela);
     }
+
+    /** Aba aberta no momento (nulo antes do login). */
+    public static String telaAtual() { return telaAtual; }
 
     /** Recria a barra superior (ex: depois de o usuário mudar o nome no perfil). */
     public static void atualizarBarra() {
-        if (Sessao.ativa()) root.setTop(new NavBar());
+        if (!Sessao.ativa()) return;
+        barra = new NavBar();
+        if (telaAtual != null) barra.marcarAtivo(telaAtual);
+        root.setTop(barra);
     }
 
     /** Abre um arquivo ou pasta no programa padrão do sistema (no Windows, o Explorer para pastas). */

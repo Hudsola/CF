@@ -1,4 +1,4 @@
-package ui.cadastros;
+package ui.financas.cadastros;
 
 import javafx.geometry.Pos;
 import javafx.scene.Node;

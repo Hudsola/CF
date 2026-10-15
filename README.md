@@ -6,20 +6,25 @@ Aplicativo desktop de controle financeiro pessoal em **Java 17 + JavaFX**, com d
 
 ## Funcionalidades
 
+O app é organizado em abas na barra superior: **Home**, **Missões**, **Finanças**, **Agenda** e **Estoque**.
+
 - **Login**: tela inicial com usuário/e-mail e senha ou **conta Google**; cada usuário só vê os próprios dados (contas, categorias, lançamentos, fixos, importações). Detalhes em [Login e usuários](#login-e-usuários)
-- **Home**: painel do usuário no estilo do HUD do GTA San Andreas (foto de perfil enviada ou da conta Google, nome, idade, barra de XP e saldo geral), receitas/despesas/saldo do mês atual, **saldo por conta**, nível e XP, gráficos do mês e lançamentos fixos ativos
-- **Cadastros**: todas as abas têm cadastro, **edição** (botão Editar ou duplo clique na linha) e exclusão com confirmação — inclusive de **várias linhas de uma vez** (Ctrl+clique, Shift+clique ou Ctrl+A, e o botão Excluir ou a tecla Delete)
-  - **Receitas, Despesas e Investimentos**; despesas com filtro por categoria, mês e ano e total do filtro
-  - **Importar CSV** (aba Despesas): importa extratos/faturas (ex: Nubank `date,title,amount`) com preview editável
-    - aceita UTF-8 ou Windows-1252 (CSV salvo pelo Excel), separador `,` ou `;`, datas `aaaa-mm-dd` ou `dd/mm/aaaa` e valores `1.234,56` ou `1234.56`
-    - linhas com erro são puladas e listadas, sem cancelar o resto
-    - pagamentos e estornos (valores negativos) e despesas que já existem na conta (mesma data e valor) vêm desmarcados
-    - **aprende** a categoria e o detalhe de cada descrição para as próximas importações
-    - a gravação é feita numa única transação: ou importa tudo, ou nada
-  - **Fixos**: lançamentos recorrentes (salário, aluguel, internet…) aplicados a um intervalo de meses sem duplicar
-  - **Categorias**
-  - **Contas**: com **saldo inicial** opcional (pode ser negativo) e tabela de saldo atual por conta
-- **Resumo**: % da renda gasta, % investida, saldo do período, tabela mês a mês com saldo acumulado e uma coluna por categoria, **movimento por conta** no período, e divisão por origem, categoria e tipo
+- **Home**: painel do usuário no estilo do HUD do GTA San Andreas (foto de perfil enviada ou da conta Google, nome, idade, barra de XP e saldo geral), um card de resumo por aba (com botão para abri-la) e nível/XP
+- **Missões**, **Agenda** e **Estoque**: em breve
+- **Finanças**, com três sub-abas:
+  - **Visão geral**: receitas/despesas/saldo do mês atual, **saldo por conta**, gráficos do mês e lançamentos fixos ativos
+  - **Cadastros**: todas as abas têm cadastro, **edição** (botão Editar ou duplo clique na linha) e exclusão com confirmação — inclusive de **várias linhas de uma vez** (Ctrl+clique, Shift+clique ou Ctrl+A, e o botão Excluir ou a tecla Delete)
+    - **Receitas, Despesas e Investimentos**; despesas com filtro por categoria, mês e ano e total do filtro
+    - **Importar CSV** (aba Despesas): importa extratos/faturas (ex: Nubank `date,title,amount`) com preview editável
+      - aceita UTF-8 ou Windows-1252 (CSV salvo pelo Excel), separador `,` ou `;`, datas `aaaa-mm-dd` ou `dd/mm/aaaa` e valores `1.234,56` ou `1234.56`
+      - linhas com erro são puladas e listadas, sem cancelar o resto
+      - pagamentos e estornos (valores negativos) e despesas que já existem na conta (mesma data e valor) vêm desmarcados
+      - **aprende** a categoria e o detalhe de cada descrição para as próximas importações
+      - a gravação é feita numa única transação: ou importa tudo, ou nada
+    - **Fixos**: lançamentos recorrentes (salário, aluguel, internet…) aplicados a um intervalo de meses sem duplicar
+    - **Categorias**
+    - **Contas**: com **saldo inicial** opcional (pode ser negativo) e tabela de saldo atual por conta
+  - **Resumo**: % da renda gasta, % investida, saldo do período, tabela mês a mês com saldo acumulado e uma coluna por categoria, **movimento por conta** no período, e divisão por origem, categoria e tipo
 
 Regra de saldo usada em todo o app: **saldo = receitas − despesas − investimentos**. O saldo de cada conta soma o saldo inicial dela: **saldo da conta = saldo inicial + receitas − despesas − investimentos lançados nela** (o investimento conta como saída da conta). O saldo geral é a soma dos saldos das contas.
 
@@ -82,13 +87,16 @@ src/main/java/
 ├── model/        entidades (Receita, Despesa, …) e tipos de apoio (Dinheiro, Periodo, Meses, Progresso)
 ├── repository/   acesso ao banco (SQL)
 ├── service/      ControleFinanceiro (fachada por usuário), Autenticacao, Senhas, GoogleOAuth, ImportacaoCsv, CalculadoraXp, Conversor
-└── ui/           App, Launcher e telas JavaFX
-    ├── cadastros/   uma classe por aba (AbaReceitas, AbaDespesas, …) sobre a base comum AbaCrud
+└── ui/           App, Launcher, SmokeTest e telas JavaFX (um pacote por aba)
     ├── login/       tela de login/cadastro e fluxo do Google
-    ├── home/, resumo/
-    └── components/  NavBar, DonutChart e Ui (fábricas de campos, colunas e diálogos)
-src/main/resources/css/dark-theme.css
-src/test/java/    testes de migração, repositórios e serviço (banco temporário por teste)
+    ├── home/        Home: painel do usuário (PainelUsuario), cards das abas, XP, perfil e foto
+    ├── missoes/, agenda/, estoque/   abas ainda "em breve"
+    ├── financas/    FinancasView (sub-abas) e VisaoGeralView
+    │   ├── cadastros/   uma classe por aba (AbaReceitas, AbaDespesas, …) sobre a base comum AbaCrud
+    │   └── resumo/      ResumoView
+    └── components/  NavBar (abas do app), DonutChart, EmBreve e Ui (fábricas de campos, colunas e diálogos)
+src/main/resources/   css/dark-theme.css, fonts/ (Pricedown), icons/ (ícone da janela)
+src/test/java/    testes de migração, repositórios, serviços e telas (TestFX; banco temporário por teste)
 ```
 
 ---

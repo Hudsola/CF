@@ -13,10 +13,28 @@ import ui.App;
 import ui.Sessao;
 
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class NavBar extends HBox {
 
+    /** Abas do app, na ordem da barra: identificador da tela -> texto do botão. */
+    public static final Map<String, String> ABAS = abas();
+
+    private final Map<String, Button> botoes = new HashMap<>();
     private Button btnAtivo;
+
+    private static Map<String, String> abas() {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("home", "HOME");
+        m.put("missoes", "MISSÕES");
+        m.put("financas", "FINANÇAS");
+        m.put("agenda", "AGENDA");
+        m.put("estoque", "ESTOQUE");
+        return Collections.unmodifiableMap(m);
+    }
 
     public NavBar() {
         setAlignment(Pos.CENTER_LEFT);
@@ -25,15 +43,12 @@ public class NavBar extends HBox {
         setPrefHeight(45);
         getStyleClass().add("navbar");
 
-        Button btnHome      = criarBotaoNav("HOME",      "home");
-        Button btnCadastros = criarBotaoNav("CADASTROS", "cadastros");
-        Button btnResumo    = criarBotaoNav("RESUMO",    "resumo");
+        for (var aba : ABAS.entrySet()) getChildren().add(criarBotaoNav(aba.getValue(), aba.getKey()));
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        getChildren().addAll(btnHome, btnCadastros, btnResumo, spacer, criarInfoBanco());
-        ativar(btnHome);
+        getChildren().addAll(spacer, criarInfoBanco());
+        marcarAtivo("home");
     }
 
     /** Usuário logado, atalho para a pasta do banco (caminho no tooltip) e botão Sair. */
@@ -61,14 +76,15 @@ public class NavBar extends HBox {
     private Button criarBotaoNav(String label, String tela) {
         Button btn = new Button(label);
         btn.getStyleClass().add("nav-button");
-        btn.setOnAction(e -> {
-            App.navegarPara(tela);
-            ativar(btn);
-        });
+        btn.setOnAction(e -> App.navegarPara(tela));
+        botoes.put(tela, btn);
         return btn;
     }
 
-    private void ativar(Button btn) {
+    /** Destaca o botão da aba aberta (chamado pelo App a cada navegação). */
+    public void marcarAtivo(String tela) {
+        Button btn = botoes.get(tela);
+        if (btn == null) return;
         if (btnAtivo != null) btnAtivo.getStyleClass().remove("nav-button-active");
         btnAtivo = btn;
         btn.getStyleClass().add("nav-button-active");

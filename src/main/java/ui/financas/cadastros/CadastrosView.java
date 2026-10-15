@@ -1,4 +1,4 @@
-package ui.cadastros;
+package ui.financas.cadastros;
 
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;

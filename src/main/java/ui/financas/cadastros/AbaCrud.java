@@ -1,4 +1,4 @@
-package ui.cadastros;
+package ui.financas.cadastros;
 
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;

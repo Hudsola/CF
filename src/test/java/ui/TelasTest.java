@@ -47,27 +47,45 @@ class TelasTest extends TelaTestBase {
 
         ProgressBar xp = (ProgressBar) exigir(n -> n.getStyleClass().contains("hud-barra-xp"), "barra de XP");
         assertTrue(xp.getProgress() > 0 && xp.getProgress() < 1, "1 lançamento = 10 de 100 XP");
-        assertTrue(temTexto("Saldo por Conta"));
-        assertTrue(temTexto("Lançamentos Fixos Ativos"));
     }
 
     @Test
-    void navegaPorTodasAsTelasEAbas() {
-        clicar("CADASTROS");
+    void navegaPorTodasAsSubAbasDeFinancas() {
+        abrirCadastros();
         for (String aba : new String[]{"Receitas", "Despesas", "Investimentos", "Fixos", "Categorias", "Contas"}) {
             clicar(aba);
             assertNotNull(exigir(n -> n instanceof TableView<?>, "tabela da aba " + aba));
         }
-        clicar("RESUMO");
+        clicar("Resumo");
         assertTrue(temTexto("Resumo Mês a Mês"));
         assertTrue(temTexto("Movimento por Conta"));
+        clicar("Visão geral");
+        assertTrue(temTexto("Saldo por Conta"));
+        assertTrue(temTexto("Lançamentos Fixos Ativos"));
         clicar("HOME");
         assertTrue(temTexto("Carla Dias"));
     }
 
     @Test
+    void visaoGeralDeFinancasMostraOMesERecarregaDepoisDeUmCadastro() {
+        clicar("FINANÇAS");
+        assertTrue(temTexto(Dinheiro.formatar(new BigDecimal("2500.00"))), "receitas do mês");
+        assertTrue(temTexto("Saldo por Conta"));
+
+        clicar("Cadastros");
+        clicar("Receitas");
+        preencher("Ex: Salário, Freelance", "Bônus");
+        preencher("Ex: 1.500,00", "500,00");
+        selecionarPrimeiraOpcao("Selecione a conta");
+        clicar("Salvar Receita");
+
+        clicar("Visão geral");
+        assertTrue(temTexto(Dinheiro.formatar(new BigDecimal("3000.00"))), "a visão geral é recarregada ao voltar");
+    }
+
+    @Test
     void cadastrarReceitaPelaTelaApareceNaTabelaENoBanco() {
-        clicar("CADASTROS");
+        abrirCadastros();
         clicar("Receitas");
         preencher("Ex: Salário, Freelance", "Freelance");
         preencher("Ex: 1.500,00", "1.234,56");
@@ -82,7 +100,7 @@ class TelasTest extends TelaTestBase {
 
     @Test
     void receitaSemContaMostraErroENaoSalva() {
-        clicar("CADASTROS");
+        abrirCadastros();
         clicar("Receitas");
         preencher("Ex: Salário, Freelance", "Freelance");
         preencher("Ex: 1.500,00", "100,00");
@@ -94,7 +112,7 @@ class TelasTest extends TelaTestBase {
 
     @Test
     void valorInvalidoMostraErro() {
-        clicar("CADASTROS");
+        abrirCadastros();
         clicar("Receitas");
         preencher("Ex: Salário, Freelance", "Freelance");
         preencher("Ex: 1.500,00", "abc");
@@ -107,7 +125,7 @@ class TelasTest extends TelaTestBase {
 
     @Test
     void editarReceitaPelaTela() {
-        clicar("CADASTROS");
+        abrirCadastros();
         clicar("Receitas");
         TableView<?> tabela = tabelaVisivel();
         interact(() -> tabela.getSelectionModel().select(0));
@@ -122,7 +140,7 @@ class TelasTest extends TelaTestBase {
 
     @Test
     void editarSemSelecionarMostraErro() {
-        clicar("CADASTROS");
+        abrirCadastros();
         clicar("Receitas");
         clicar("Editar");
         assertTrue(temTexto("✖ Selecione um item na tabela."));
@@ -130,7 +148,7 @@ class TelasTest extends TelaTestBase {
 
     @Test
     void cadastrarContaComSaldoInicialAtualizaOSaldoNaHome() {
-        clicar("CADASTROS");
+        abrirCadastros();
         clicar("Contas");
         preencher("Nome da conta (ex: Nubank, Itaú)", "Itaú");
         preencher("Opcional. Ex: 1.250,00 ou -300,00", "-500,00");
@@ -143,12 +161,18 @@ class TelasTest extends TelaTestBase {
 
     @Test
     void contaComNomeRepetidoMostraErro() {
-        clicar("CADASTROS");
+        abrirCadastros();
         clicar("Contas");
         preencher("Nome da conta (ex: Nubank, Itaú)", "nubank");
         clicar("Salvar Conta");
         assertTrue(temTextoComecandoCom("✖"));
         assertEquals(1, new ControleFinanceiro(usuario.getId()).getContas().size());
+    }
+
+    /** Finanças → Cadastros. */
+    private void abrirCadastros() {
+        clicar("FINANÇAS");
+        clicar("Cadastros");
     }
 
     private TableView<?> tabelaVisivel() {

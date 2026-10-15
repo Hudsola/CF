@@ -1,4 +1,4 @@
-package ui.cadastros;
+package ui.financas.cadastros;
 
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;

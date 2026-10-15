@@ -44,7 +44,7 @@ class LoginTelaTest extends TelaTestBase {
         esperar(() -> temTexto("Olá, Ana Teste"));
 
         assertTrue(temTexto("Ana Teste"), "nome no painel do usuário");
-        assertTrue(temTexto("Saldo por Conta"));
+        assertNotNull(botao("Abrir Finanças →"), "Home com o card de Finanças");
 
         clicar("Sair");
         assertNotNull(botao("Entrar"));

@@ -1,4 +1,4 @@
-package ui.resumo;
+package ui.financas.resumo;
 
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
