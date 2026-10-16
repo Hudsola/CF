@@ -1,6 +1,6 @@
-# Controle Financeiro Pessoal
+# MyCareer
 
-Aplicativo desktop de controle financeiro pessoal em **Java 17 + JavaFX**, com dados guardados localmente em **SQLite**. Ele substitui uma planilha de receitas e gastos.
+Aplicativo desktop em **Java 17 + JavaFX** para organizar a vida pessoal como uma carreira de jogo: missões, finanças, agenda e estoque, com nível e XP. Os dados ficam localmente em **SQLite**. Começou como um controle financeiro que substituía uma planilha de receitas e gastos (o antigo "Controle Financeiro Pessoal").
 
 ---
 
@@ -10,7 +10,14 @@ O app é organizado em abas na barra superior: **Home**, **Missões**, **Finanç
 
 - **Login**: tela inicial com usuário/e-mail e senha ou **conta Google**; cada usuário só vê os próprios dados (contas, categorias, lançamentos, fixos, importações). Detalhes em [Login e usuários](#login-e-usuários)
 - **Home**: painel do usuário no estilo do HUD do GTA San Andreas (foto de perfil enviada ou da conta Google, nome, idade, barra de XP e saldo geral), um card de resumo por aba (com botão para abri-la) e nível/XP
-- **Missões**, **Agenda** e **Estoque**: em breve
+- **Missões**: cadastro de missões de quatro tipos, que entram na Agenda como pendentes:
+  - **Diária**: um ou mais dias escolhidos, podendo ser hoje (ex: levar o carro na revisão em 17/10)
+  - **Semanal**: dias da semana fixos, a partir de uma data e opcionalmente até outra (ex: trabalho de segunda a sexta, academia segunda, quarta e sexta)
+  - **Mensal**: um dia do mês (ex: pagar a fatura todo dia 5); se o mês não tiver o dia (31 em fevereiro), vale o último dia
+  - **Sem prazo**: objetivos sem data (ex: juntar R$ 10 mil, comprar uma moto, aprender inglês), concluídos uma única vez
+  - listas de **hoje** e das **atrasadas** (últimos 7 dias) com caixa de marcar: marcar conclui o dia e rende XP; desmarcar desfaz. Dias futuros não podem ser marcados
+- **Agenda**: calendário do mês com as missões de cada dia (pendentes em dourado, feitas em verde, atrasadas em vermelho); clicar num dia mostra a lista dele, onde também dá para marcar como feita
+- **Estoque**: em breve
 - **Finanças**, com três sub-abas:
   - **Visão geral**: receitas/despesas/saldo do mês atual, **saldo por conta**, gráficos do mês e lançamentos fixos ativos
   - **Cadastros**: todas as abas têm cadastro, **edição** (botão Editar ou duplo clique na linha) e exclusão com confirmação — inclusive de **várias linhas de uma vez** (Ctrl+clique, Shift+clique ou Ctrl+A, e o botão Excluir ou a tecla Delete)
@@ -32,13 +39,15 @@ Valores em dinheiro são calculados com `BigDecimal` (sem erros de arredondament
 
 ### Nível e XP
 
-O XP é recalculado a partir dos seus lançamentos sempre que a Home abre (não fica gravado no banco):
+O XP é recalculado a partir dos seus lançamentos e das missões cumpridas sempre que a Home abre (não fica gravado no banco):
 
 | Ação                                              | XP   |
 |---------------------------------------------------|------|
 | Cada receita, despesa ou investimento registrado  | +10  |
 | Cada mês já encerrado que fechou com saldo positivo | +50 |
 | Cada mês com pelo menos um investimento           | +30  |
+| Cada dia cumprido de uma missão diária, semanal ou mensal | +20 |
+| Cada missão sem prazo cumprida                    | +100 |
 
 Para passar do nível N para o N+1 são necessários N × 100 XP (100 para o nível 2, mais 200 para o 3, e assim por diante). As regras ficam em `service/CalculadoraXp.java`.
 
@@ -59,10 +68,10 @@ O app abre na tela de login; a Home e as demais telas só aparecem depois de ent
 
 Para o botão **Entrar com Google** funcionar, o app precisa de credenciais OAuth registradas no Google Cloud (gratuito). Sem elas o botão aparece desativado e o login local funciona normalmente.
 
-1. Acesse [console.cloud.google.com](https://console.cloud.google.com), crie um projeto (ex: *Controle Financeiro*).
+1. Acesse [console.cloud.google.com](https://console.cloud.google.com), crie um projeto (ex: *MyCareer*).
 2. **APIs e serviços → Tela de consentimento OAuth** (ou *Google Auth Platform → Branding*): tipo **Externo**, preencha o nome do app e o seu e-mail. Em **Usuários de teste** (*Audience*), adicione os e-mails Google que vão usar o app. Escopos: `openid`, `email`, `profile` (não exigem verificação do Google).
 3. **APIs e serviços → Credenciais → Criar credenciais → ID do cliente OAuth**, tipo de aplicativo **App para computador** (*Desktop app*).
-4. Clique em **Fazer download do JSON** e salve o arquivo com o nome **`google-oauth.json`** na pasta de dados (`C:\Users\<você>\ControleFinanceiro\` — na tela de login há o link **Abrir pasta de dados**).
+4. Clique em **Fazer download do JSON** e salve o arquivo com o nome **`google-oauth.json`** na pasta de dados (`C:\Users\<você>\MyCareer\` — na tela de login há o link **Abrir pasta de dados**).
 5. Reabra o app: o botão **Entrar com Google** fica ativo.
 
 Ao clicar, o app abre o navegador na página de login do Google e recebe o retorno em `http://127.0.0.1:<porta>/` (fluxo para apps de desktop, com PKCE). O arquivo de credenciais fica fora do Git (`.gitignore`). Enquanto o app estiver em modo de teste no Google Cloud, só os e-mails cadastrados como usuários de teste conseguem entrar.
@@ -86,15 +95,17 @@ src/main/java/
 ├── db/           DatabaseManager — conexão, criação das tabelas e migrações de esquema
 ├── model/        entidades (Receita, Despesa, …) e tipos de apoio (Dinheiro, Periodo, Meses, Progresso)
 ├── repository/   acesso ao banco (SQL)
-├── service/      ControleFinanceiro (fachada por usuário), Autenticacao, Senhas, GoogleOAuth, ImportacaoCsv, CalculadoraXp, Conversor
+├── service/      ControleFinanceiro (fachada financeira por usuário), Missoes, Autenticacao, Senhas, GoogleOAuth, ImportacaoCsv, CalculadoraXp, Conversor
 └── ui/           App, Launcher, SmokeTest e telas JavaFX (um pacote por aba)
     ├── login/       tela de login/cadastro e fluxo do Google
     ├── home/        Home: painel do usuário (PainelUsuario), cards das abas, XP, perfil e foto
-    ├── missoes/, agenda/, estoque/   abas ainda "em breve"
+    ├── missoes/     MissoesView, cadastro (AbaMissoes) e ListaMissoes (marcar como feita)
+    ├── agenda/      AgendaView: calendário do mês e lista do dia
+    ├── estoque/     aba ainda "em breve"
     ├── financas/    FinancasView (sub-abas) e VisaoGeralView
     │   ├── cadastros/   uma classe por aba (AbaReceitas, AbaDespesas, …) sobre a base comum AbaCrud
     │   └── resumo/      ResumoView
-    └── components/  NavBar (abas do app), DonutChart, EmBreve e Ui (fábricas de campos, colunas e diálogos)
+    └── components/  NavBar (abas do app), AbaCrud (base dos cadastros), DonutChart, EmBreve e Ui
 src/main/resources/   css/dark-theme.css, fonts/ (Pricedown), icons/ (ícone da janela)
 src/test/java/    testes de migração, repositórios, serviços e telas (TestFX; banco temporário por teste)
 ```
@@ -104,7 +115,7 @@ src/test/java/    testes de migração, repositórios, serviços e telas (TestFX
 ## Instalar e usar (Windows)
 
 1. Em [Actions](https://github.com/Hudsola/CF/actions), abra a execução mais recente do branch `main` e baixe o artefato **executavel-Windows** (precisa estar logado no GitHub; os artefatos expiram em 30 dias).
-2. Descompacte e rode `ControleFinanceiro-<versão>.exe`. A instalação é feita na sua pasta de usuário, **sem pedir senha de administrador**, e cria atalhos na área de trabalho e no menu Iniciar.
+2. Descompacte e rode `MyCareer-<versão>.exe`. A instalação é feita na sua pasta de usuário, **sem pedir senha de administrador**, e cria atalhos na área de trabalho e no menu Iniciar.
 3. Como o instalador não tem assinatura digital, o Windows pode mostrar "O Windows protegeu o computador": clique em **Mais informações → Executar assim mesmo**.
 4. Para atualizar, basta instalar a versão nova por cima: ela substitui a anterior e **seus dados são mantidos** (ficam fora da pasta do programa, veja [Banco de dados](#banco-de-dados)).
 
@@ -122,7 +133,7 @@ mvn javafx:run
 
 # Ou gerar o JAR executável e rodar
 mvn package
-java -jar target/controle-financeiro-<versão>.jar
+java -jar target/mycareer-<versão>.jar
 ```
 
 O JAR gerado só traz os componentes nativos do JavaFX do sistema onde foi compilado. Para usar em outro sistema, compile nele ou use o instalador.
@@ -133,13 +144,13 @@ O JAR gerado só traz os componentes nativos do JavaFX do sistema onde foi compi
 mvn clean package -Pinstalador
 ```
 
-O instalador sai em `target/dist`: `.exe` no Windows (exige o [WiX Toolset 3](https://github.com/wixtoolset/wix3/releases) instalado), `.deb` no Linux e `.dmg` no macOS. Sem o WiX, dá para gerar a versão portátil (pasta com `ControleFinanceiro.exe`, sem instalação):
+O instalador sai em `target/dist`: `.exe` no Windows (exige o [WiX Toolset 3](https://github.com/wixtoolset/wix3/releases) instalado), `.deb` no Linux e `.dmg` no macOS. Sem o WiX, dá para gerar a versão portátil (pasta com `MyCareer.exe`, sem instalação):
 
 ```bash
 mvn clean package -Pinstalador -Djpackage.tipo=app-image "-Djpackage.args.so="
 ```
 
-O ícone do app ("CF" dourado na fonte do GTA) fica em `empacotamento/` (`.ico`, `.png` e `.icns`, usados pelo jpackage) e em `src/main/resources/icons/` (janela). Para mudá-lo, edite e rode `java ferramentas/GerarIcone.java`, que gera todos os arquivos.
+O ícone do app ("MC" dourado na fonte do GTA) fica em `empacotamento/` (`.ico`, `.png` e `.icns`, usados pelo jpackage) e em `src/main/resources/icons/` (janela). Para mudá-lo, edite e rode `java ferramentas/GerarIcone.java`, que gera todos os arquivos.
 
 Ao lançar uma versão nova, suba a `<version>` no `pom.xml` (ela vira a versão do instalador). Não altere o `--win-upgrade-uuid` do perfil `so-windows`: é ele que faz a versão nova substituir a antiga.
 
@@ -147,9 +158,11 @@ Ao lançar uma versão nova, suba a `<version>` no `pom.xml` (ela vira a versão
 
 ## Banco de dados
 
-O banco fica em **`<pasta do usuário>/ControleFinanceiro/controle_financeiro.db`** (no Windows, `C:\Users\<você>\ControleFinanceiro\`), seja rodando pelo instalador, pelo JAR ou pela IDE. O botão **Pasta de dados** (canto superior direito) abre essa pasta; o caminho completo aparece ao passar o mouse sobre ele. Na primeira execução, se essa pasta ainda não tiver banco e existir um `controle_financeiro.db` na pasta atual (versões antigas gravavam ali), ele é **copiado** para lá; o original não é apagado.
+O banco fica em **`<pasta do usuário>/MyCareer/mycareer.db`** (no Windows, `C:\Users\<você>\MyCareer\`), seja rodando pelo instalador, pelo JAR ou pela IDE. O botão **Pasta de dados** (canto superior direito) abre essa pasta; o caminho completo aparece ao passar o mouse sobre ele.
 
-Para guardar os dados em outro lugar, defina a variável de ambiente `CONTROLE_FINANCEIRO_PASTA` com a pasta desejada.
+**Vindo do Controle Financeiro (até a versão 1.5):** na primeira execução do MyCareer, se a pasta nova ainda não tiver banco, o app **copia** o `controle_financeiro.db` da pasta antiga (`<pasta do usuário>/ControleFinanceiro/`), junto com o `google-oauth.json` e as fotos de perfil. Nada é apagado: a pasta antiga fica intacta e pode ser removida depois de conferir que está tudo certo. Versões ainda mais antigas gravavam o banco na pasta do programa; ele também é procurado lá.
+
+Para guardar os dados em outro lugar, defina a variável de ambiente `MYCAREER_PASTA` com a pasta desejada (o nome antigo, `CONTROLE_FINANCEIRO_PASTA`, ainda é aceito).
 
 O arquivo contém seus dados pessoais e **não é versionado** (está no `.gitignore`). Faça backup copiando esse arquivo.
 
@@ -164,10 +177,13 @@ O arquivo contém seus dados pessoais e **não é versionado** (está no `.gitig
 | `aplicacoes_fixos`      | Em quais meses cada fixo já foi aplicado           |
 | `mapeamentos_descricao` | Regras aprendidas na importação de CSV             |
 | `usuarios`              | Usuários: nome, usuário, e-mail, nascimento, hash da senha, id Google |
+| `missoes`               | Missões: título, tipo, dias da semana ou do mês, período e conclusão (sem prazo) |
+| `missao_datas`          | Dias escolhidos das missões diárias                |
+| `missao_conclusoes`     | Dias em que cada missão foi cumprida               |
 
 As chaves estrangeiras são verificadas (`foreign_keys` ligado), então não é possível gravar lançamentos com conta ou categoria inexistente. Valores ficam em colunas `REAL` com 2 casas decimais e datas em texto `aaaa-mm-dd`; o mês e o ano de cada lançamento são derivados da data.
 
-**Migrações:** a versão do esquema fica em `PRAGMA user_version`. Ao abrir um banco de uma versão anterior, o app atualiza a estrutura sozinho e, **antes de alterar qualquer coisa**, salva uma cópia como `controle_financeiro-backup-v{versão}-{data}.db` na mesma pasta. Se algo der errado, a migração é desfeita por inteiro.
+**Migrações:** a versão do esquema fica em `PRAGMA user_version`. Ao abrir um banco de uma versão anterior, o app atualiza a estrutura sozinho e, **antes de alterar qualquer coisa**, salva uma cópia como `mycareer-backup-v{versão}-{data}.db` na mesma pasta. Se algo der errado, a migração é desfeita por inteiro.
 
 | Versão | Mudança                                                                                   |
 |--------|-------------------------------------------------------------------------------------------|
@@ -191,7 +207,7 @@ mvn verify    # testes + cobertura (target/site/jacoco/index.html) + SpotBugs
 - **Interface** (TestFX): login, cadastro, navegação e cadastros pelas telas. Rodam sem abrir janelas (Monocle); para vê-las no Windows: `mvn test -Dtestfx.headless=false -Dglass.platform=win`
 - **Cobertura**: o build falha abaixo de 70% das linhas do projeto inteiro (JaCoCo)
 - **Análise estática** (SpotBugs): o build falha se houver achados; exceções justificadas em `spotbugs-exclude.xml`
-- **Smoke test** do app empacotado: `java -jar target/controle-financeiro-<versão>.jar --smoke-test` abre o app com um banco temporário, entra com um usuário de teste, percorre todas as telas e sai com código 0 (ou 1 se algo falhar)
+- **Smoke test** do app empacotado: `java -jar target/mycareer-<versão>.jar --smoke-test` abre o app com um banco temporário, entra com um usuário de teste, percorre todas as telas e sai com código 0 (ou 1 se algo falhar)
 
 No GitHub Actions os testes rodam no Linux e no Windows; o JAR e os instaladores (.deb e .dmg instalados de verdade) passam pelo smoke test. O Dependabot abre PRs semanais com atualizações de dependências.
 

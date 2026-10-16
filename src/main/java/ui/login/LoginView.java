@@ -43,7 +43,7 @@ public class LoginView {
     // -------------------------------------------------------------------------
 
     private void mostrarEntrar() {
-        VBox card = card("Controle Financeiro", "Entre para ver as suas finanças.");
+        VBox card = card("MyCareer", "Entre para continuar a sua carreira.");
 
         Optional<Usuario> semAcesso = auth.perfilSemAcesso();
         semAcesso.ifPresent(perfil -> card.getChildren().add(avisoDadosExistentes(perfil)));

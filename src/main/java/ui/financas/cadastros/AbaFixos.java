@@ -12,7 +12,7 @@ import ui.components.Ui;
 import java.time.LocalDate;
 import java.util.List;
 
-class AbaFixos extends AbaCrud<LancamentoFixo> {
+class AbaFixos extends AbaFinancas<LancamentoFixo> {
 
     private final ComboBox<Tipo> cbTipo = new ComboBox<>();
     private final TextField tfDesc = Ui.campo("Ex: Condomínio, Salário");

@@ -5,6 +5,7 @@ import javafx.scene.control.TabPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import service.ControleFinanceiro;
+import ui.components.AbaCrud;
 
 /** Tela "Cadastros": uma aba por tipo de registro. Cada aba recarrega seus dados ao ser selecionada. */
 public class CadastrosView {

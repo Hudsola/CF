@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /** Contas com saldo inicial e saldo atual (saldo inicial + receitas − despesas − investimentos). */
-class AbaContas extends AbaCrud<SaldoConta> {
+class AbaContas extends AbaFinancas<SaldoConta> {
 
     private final TextField tfNome = Ui.campo("Nome da conta (ex: Nubank, Itaú)");
     private final TextField tfSaldoInicial = Ui.campo("Opcional. Ex: 1.250,00 ou -300,00");

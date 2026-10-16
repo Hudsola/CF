@@ -12,7 +12,7 @@ import ui.components.Ui;
 import java.time.LocalDate;
 import java.util.List;
 
-class AbaInvestimentos extends AbaCrud<Investimento> {
+class AbaInvestimentos extends AbaFinancas<Investimento> {
 
     private final TextField tfTipo  = Ui.campo("Ex: Poupança, Tesouro Direto, CDB");
     private final TextField tfValor = Ui.campo("Ex: 500,00");

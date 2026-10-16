@@ -12,10 +12,20 @@ import java.util.Properties;
 
 public class DatabaseManager {
 
-    static final String NOME_ARQUIVO = "controle_financeiro.db";
+    static final String NOME_ARQUIVO = "mycareer.db";
+    /** Nome do banco quando o app se chamava "Controle Financeiro" (até a versão 1.5). */
+    static final String NOME_ARQUIVO_ANTIGO = "controle_financeiro.db";
+
+    static final String PASTA_PADRAO = "MyCareer";
+    static final String PASTA_ANTIGA = "ControleFinanceiro";
 
     /** Variável de ambiente que troca a pasta dos dados (útil para testes ou para guardar em outro disco). */
-    static final String VARIAVEL_PASTA = "CONTROLE_FINANCEIRO_PASTA";
+    static final String VARIAVEL_PASTA = "MYCAREER_PASTA";
+    /** Nome antigo da variável, ainda aceito. */
+    static final String VARIAVEL_PASTA_ANTIGA = "CONTROLE_FINANCEIRO_PASTA";
+
+    /** Arquivos e pastas de configuração levados junto com o banco ao migrar da pasta antiga. */
+    private static final List<String> ARQUIVOS_DE_DADOS = List.of("google-oauth.json", "fotos");
 
     private static String customUrl = null;
     private static Path arquivoPadrao = null;
@@ -23,7 +33,7 @@ public class DatabaseManager {
     private static final Object TRAVA_ARQUIVO = new Object();
 
     /** Versão do esquema gravada em PRAGMA user_version. Suba ao criar uma nova migração. */
-    static final int VERSAO_ESQUEMA = 3;
+    static final int VERSAO_ESQUEMA = 4;
 
     /** Permite injetar URL customizada (ex: :memory: para testes). */
     public static void setUrl(String url) { customUrl = url; }
@@ -33,7 +43,7 @@ public class DatabaseManager {
     }
 
     /**
-     * Arquivo do banco em uso: {@code <pasta do usuário>/ControleFinanceiro/controle_financeiro.db}.
+     * Arquivo do banco em uso: {@code <pasta do usuário>/MyCareer/mycareer.db}.
      *
      * Fica fora da pasta do programa porque, instalado, o app não pode gravar em "Arquivos de Programas",
      * e assim os dados são os mesmos rodando pelo instalador, pelo JAR ou pela IDE.
@@ -43,10 +53,10 @@ public class DatabaseManager {
         synchronized (TRAVA_ARQUIVO) {
             if (arquivoPadrao == null) {
                 String env = System.getenv(VARIAVEL_PASTA);
-                Path pasta = env != null && !env.isBlank()
-                        ? Path.of(env)
-                        : Path.of(System.getProperty("user.home"), "ControleFinanceiro");
-                arquivoPadrao = prepararArquivo(pasta, Path.of("").toAbsolutePath());
+                if (env == null || env.isBlank()) env = System.getenv(VARIAVEL_PASTA_ANTIGA);
+                Path home = Path.of(System.getProperty("user.home"));
+                Path pasta = env != null && !env.isBlank() ? Path.of(env) : home.resolve(PASTA_PADRAO);
+                arquivoPadrao = prepararArquivo(pasta, List.of(home.resolve(PASTA_ANTIGA), Path.of("").toAbsolutePath()));
             }
             return arquivoPadrao;
         }
@@ -59,20 +69,45 @@ public class DatabaseManager {
     }
 
     /**
-     * Garante a pasta de dados e devolve o caminho do banco nela. Se ainda não houver banco lá, mas existir
-     * um {@value #NOME_ARQUIVO} na pasta atual (versões antigas gravavam ali), copia-o — o original fica intacto.
+     * Garante a pasta de dados e devolve o caminho do banco nela.
+     *
+     * Na primeira vez (sem {@value #NOME_ARQUIVO} na pasta), procura o banco do tempo em que o app se chamava
+     * "Controle Financeiro" ({@value #NOME_ARQUIVO_ANTIGO}): primeiro na própria pasta, depois em cada uma das
+     * {@code pastasAntigas}, na ordem. O primeiro encontrado é copiado, junto com o google-oauth.json e as fotos
+     * da mesma pasta. Nada é apagado: os arquivos antigos ficam intactos.
      */
-    static Path prepararArquivo(Path pastaDados, Path pastaAtual) {
+    static Path prepararArquivo(Path pastaDados, List<Path> pastasAntigas) {
         Path destino = pastaDados.resolve(NOME_ARQUIVO).toAbsolutePath();
         try {
             Files.createDirectories(pastaDados);
-            Path antigo = pastaAtual.resolve(NOME_ARQUIVO).toAbsolutePath();
-            if (!Files.exists(destino) && Files.exists(antigo) && !antigo.equals(destino))
+            if (Files.exists(destino)) return destino;
+            List<Path> candidatas = new java.util.ArrayList<>();
+            candidatas.add(pastaDados);
+            candidatas.addAll(pastasAntigas);
+            for (Path pasta : candidatas) {
+                Path antigo = pasta.resolve(NOME_ARQUIVO_ANTIGO).toAbsolutePath();
+                if (!Files.exists(antigo)) continue;
                 Files.copy(antigo, destino, StandardCopyOption.COPY_ATTRIBUTES);
+                if (!pasta.toAbsolutePath().equals(pastaDados.toAbsolutePath()))
+                    for (String nome : ARQUIVOS_DE_DADOS) copiarSeNaoExistir(pasta.resolve(nome), pastaDados.resolve(nome));
+                break;
+            }
         } catch (IOException e) {
             throw new RuntimeException("Não foi possível preparar a pasta de dados " + pastaDados + ": " + e.getMessage(), e);
         }
         return destino;
+    }
+
+    /** Copia um arquivo ou uma pasta inteira, sem sobrescrever o que já existir no destino. */
+    private static void copiarSeNaoExistir(Path origem, Path destino) throws IOException {
+        if (!Files.exists(origem)) return;
+        try (var caminhos = Files.walk(origem)) {
+            for (Path p : (Iterable<Path>) caminhos::iterator) {
+                Path alvo = destino.resolve(origem.relativize(p).toString());
+                if (Files.isDirectory(p)) Files.createDirectories(alvo);
+                else if (!Files.exists(alvo)) Files.copy(p, alvo, StandardCopyOption.COPY_ATTRIBUTES);
+            }
+        }
     }
 
     public static Connection getConnection() throws SQLException {
@@ -184,6 +219,40 @@ public class DatabaseManager {
                 )
             """);
 
+            // Missões (v4). Campos usados conforme o tipo: ver model.Missao.
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS missoes (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    usuario_id   INTEGER NOT NULL REFERENCES usuarios(id),
+                    titulo       TEXT    NOT NULL,
+                    descricao    TEXT,
+                    tipo         TEXT    NOT NULL,
+                    dias_semana  TEXT,
+                    dia_mes      INTEGER,
+                    data_inicio  TEXT,
+                    data_fim     TEXT,
+                    concluida_em TEXT,
+                    criada_em    TEXT
+                )
+            """);
+            // dias escolhidos das missões diárias
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS missao_datas (
+                    missao_id INTEGER NOT NULL REFERENCES missoes(id),
+                    data      TEXT    NOT NULL,
+                    PRIMARY KEY (missao_id, data)
+                )
+            """);
+            // ocorrências cumpridas (missão + dia)
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS missao_conclusoes (
+                    missao_id    INTEGER NOT NULL REFERENCES missoes(id),
+                    data         TEXT    NOT NULL,
+                    concluida_em TEXT,
+                    PRIMARY KEY (missao_id, data)
+                )
+            """);
+
             migrar(conn);
 
             // Login: usuário, e-mail e conta Google não podem se repetir (vários NULL são permitidos).
@@ -197,6 +266,7 @@ public class DatabaseManager {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_receitas_data ON receitas(data)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_despesas_data ON despesas(data)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_investimentos_data ON investimentos(data)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_missoes_usuario ON missoes(usuario_id)");
 
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao inicializar banco: " + e.getMessage(), e);
@@ -209,7 +279,7 @@ public class DatabaseManager {
 
     /**
      * Atualiza bancos criados por versões anteriores do app. Antes de alterar o esquema, copia o
-     * arquivo do banco para "controle_financeiro-backup-v{versão}-{data}.db" na mesma pasta.
+     * arquivo do banco para "mycareer-backup-v{versão}-{data}.db" na mesma pasta.
      * Se qualquer passo falhar, nada é alterado.
      */
     private static void migrar(Connection conn) throws SQLException {
@@ -245,6 +315,7 @@ public class DatabaseManager {
                 stmt.execute("ALTER TABLE contas ADD COLUMN saldo_inicial REAL NOT NULL DEFAULT 0");
             }
             if (alteraV3) migrarParaV3(stmt, conn);
+            // v4 (missões): só tabelas novas, já criadas em inicializar(); não há dados a converter.
 
             try (ResultSet rs = stmt.executeQuery("PRAGMA foreign_key_check")) {
                 if (rs.next())

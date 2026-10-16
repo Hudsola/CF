@@ -14,7 +14,9 @@ import java.util.*;
  * Regras:
  *  - +{@value #XP_POR_LANCAMENTO} XP por lançamento registrado (receita, despesa ou investimento);
  *  - +{@value #XP_MES_POSITIVO} XP por mês já encerrado que fechou com saldo positivo;
- *  - +{@value #XP_MES_COM_INVESTIMENTO} XP por mês com pelo menos um investimento.
+ *  - +{@value #XP_MES_COM_INVESTIMENTO} XP por mês com pelo menos um investimento;
+ *  - +{@value #XP_POR_MISSAO} XP por dia cumprido de uma missão diária, semanal ou mensal;
+ *  - +{@value #XP_MISSAO_SEM_PRAZO} XP por missão sem prazo cumprida.
  * Para sair do nível N para o N+1 são necessários N × {@value #XP_BASE_NIVEL} XP.
  */
 public final class CalculadoraXp {
@@ -22,13 +24,26 @@ public final class CalculadoraXp {
     public static final int XP_POR_LANCAMENTO = 10;
     public static final int XP_MES_POSITIVO = 50;
     public static final int XP_MES_COM_INVESTIMENTO = 30;
+    public static final int XP_POR_MISSAO = 20;
+    public static final int XP_MISSAO_SEM_PRAZO = 100;
     public static final int XP_BASE_NIVEL = 100;
 
     private CalculadoraXp() {}
 
+    /** XP só dos lançamentos financeiros. */
     public static Progresso calcular(List<Receita> receitas, List<Despesa> despesas,
                                      List<Investimento> investimentos, LocalDate hoje) {
-        int xp = (receitas.size() + despesas.size() + investimentos.size()) * XP_POR_LANCAMENTO;
+        return calcular(receitas, despesas, investimentos, 0, 0, hoje);
+    }
+
+    /**
+     * @param diasDeMissaoCumpridos    ocorrências cumpridas de missões diárias, semanais e mensais
+     * @param missoesSemPrazoCumpridas missões sem prazo cumpridas
+     */
+    public static Progresso calcular(List<Receita> receitas, List<Despesa> despesas, List<Investimento> investimentos,
+                                     int diasDeMissaoCumpridos, int missoesSemPrazoCumpridas, LocalDate hoje) {
+        int xp = diasDeMissaoCumpridos * XP_POR_MISSAO + missoesSemPrazoCumpridas * XP_MISSAO_SEM_PRAZO;
+        xp += (receitas.size() + despesas.size() + investimentos.size()) * XP_POR_LANCAMENTO;
 
         Map<YearMonth, BigDecimal> saldoPorMes = new HashMap<>();
         receitas.forEach(r -> saldoPorMes.merge(YearMonth.from(r.getData()), r.getValor(), BigDecimal::add));

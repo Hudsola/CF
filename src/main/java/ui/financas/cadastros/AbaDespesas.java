@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
 
-class AbaDespesas extends AbaCrud<Despesa> {
+class AbaDespesas extends AbaFinancas<Despesa> {
 
     private final ComboBox<Categoria> cbCat = new ComboBox<>();
     private final TextField tfDetalhe = Ui.campo("Ex: Supermercado, Netflix");

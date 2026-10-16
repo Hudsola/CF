@@ -51,9 +51,11 @@ public class ControleFinanceiro {
         usuarioRepo.atualizarPerfil(usuarioId, nome.trim(), getUsuario().getEmail(), dataNascimento);
     }
 
-    /** Nível e XP calculados a partir de todos os lançamentos (ver {@link CalculadoraXp}). */
+    /** Nível e XP do usuário: lançamentos e missões cumpridas (ver {@link CalculadoraXp}). */
     public Progresso getProgresso() {
-        return CalculadoraXp.calcular(getReceitas(), getDespesas(), getInvestimentos(), LocalDate.now());
+        var missoes = new repository.MissaoRepository(usuarioId);
+        return CalculadoraXp.calcular(getReceitas(), getDespesas(), getInvestimentos(),
+                missoes.totalConclusoes(), missoes.totalSemPrazoConcluidas(), LocalDate.now());
     }
 
     // --- Categorias ---

@@ -28,6 +28,18 @@ public final class Ui {
     public static final String COR_DESTAQUE = "#E8A838";
 
     public static final DateTimeFormatter DATA_BR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    public static final java.util.Locale PT_BR = java.util.Locale.forLanguageTag("pt-BR");
+
+    /** Ex: "qui, 15/10". */
+    public static String diaCurto(LocalDate d) {
+        return d.getDayOfWeek().getDisplayName(java.time.format.TextStyle.SHORT, PT_BR).replace(".", "")
+                + ", " + DateTimeFormatter.ofPattern("dd/MM").format(d);
+    }
+
+    /** Ex: "quinta-feira, 15 de outubro de 2026". */
+    public static String diaPorExtenso(LocalDate d) {
+        return DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM 'de' yyyy", PT_BR).format(d);
+    }
 
     /**
      * Fonte dos valores do painel do usuário na Home (estilo HUD do GTA San Andreas): a Pricedown, se o

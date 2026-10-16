@@ -5,6 +5,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import model.Categoria;
 import service.ControleFinanceiro;
+import ui.components.AbaCrud;
 import ui.components.Ui;
 
 import java.util.List;
@@ -15,7 +16,7 @@ final class AbaNomes {
     private AbaNomes() {}
 
     static AbaCrud<Categoria> categorias(ControleFinanceiro cf) {
-        return new AbaCrud<>(cf) {
+        return new AbaFinancas<>(cf) {
             private final TextField tfNome = Ui.campo("Nome da categoria");
 
             @Override protected String nome() { return "Categoria"; }

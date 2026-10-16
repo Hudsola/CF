@@ -106,12 +106,12 @@ public class GoogleOAuth {
             } else if (q.containsKey("error")) {
                 esperado.completeExceptionally(new IllegalStateException(
                         "access_denied".equals(q.get("error")) ? "Login com Google cancelado." : "Google recusou o login: " + q.get("error")));
-                html = "Login cancelado. Você pode fechar esta aba e voltar ao Controle Financeiro.";
+                html = "Login cancelado. Você pode fechar esta aba e voltar ao MyCareer.";
             } else {
                 esperado.complete(q.get("code"));
-                html = "Login concluído! Você pode fechar esta aba e voltar ao Controle Financeiro.";
+                html = "Login concluído! Você pode fechar esta aba e voltar ao MyCareer.";
             }
-            byte[] corpo = ("<!doctype html><meta charset=utf-8><title>Controle Financeiro</title>"
+            byte[] corpo = ("<!doctype html><meta charset=utf-8><title>MyCareer</title>"
                     + "<body style='font-family:sans-serif;background:#121212;color:#ddd;text-align:center;padding-top:15%'>"
                     + "<h2>" + html + "</h2>").getBytes(StandardCharsets.UTF_8);
             troca.getResponseHeaders().add("Content-Type", "text/html; charset=utf-8");

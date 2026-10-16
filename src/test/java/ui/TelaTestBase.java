@@ -35,7 +35,7 @@ abstract class TelaTestBase extends FxRobot {
 
     @BeforeEach
     void abrirApp() throws Exception {
-        Path banco = Files.createTempFile("controle_financeiro_tela_", ".db");
+        Path banco = Files.createTempFile("mycareer_tela_", ".db");
         banco.toFile().deleteOnExit();
         DatabaseManager.setUrl("jdbc:sqlite:" + banco.toAbsolutePath());
         DatabaseManager.inicializar();

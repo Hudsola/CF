@@ -1,5 +1,5 @@
 /* ============================================================
-   DARK THEME — Controle Financeiro Pessoal
+   DARK THEME — MyCareer
    Inspirado no dashboard do Rockstar Social Club (GTA)
    ============================================================ */
 
@@ -225,6 +225,119 @@
     -fx-font-size: 10px;
     -fx-font-weight: bold;
     -fx-padding: 3 8 3 8;
+}
+
+/* --- Missões --- */
+.missao-item {
+    -fx-padding: 4 0 4 0;
+}
+
+.missao-titulo {
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 13px;
+}
+
+.missao-feita {
+    -fx-text-fill: #6f6f6f;
+}
+
+.missao-feita .text {
+    -fx-strikethrough: true;
+}
+
+.missao-atrasada {
+    -fx-text-fill: #E85C4A;
+}
+
+.chip-dia {
+    -fx-background-color: #2a2412;
+    -fx-border-color: #E8A838;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-text-fill: #E8A838;
+    -fx-font-size: 11px;
+    -fx-padding: 3 10 3 10;
+    -fx-cursor: hand;
+}
+
+.check-box .box {
+    -fx-background-color: #252525;
+    -fx-border-color: #555555;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+}
+
+.check-box:selected .mark {
+    -fx-background-color: #4AE87A;
+}
+
+.check-box .text {
+    -fx-fill: #c0c0c0;
+}
+
+/* --- Agenda --- */
+.agenda-cabecalho {
+    -fx-text-fill: #888888;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+    -fx-padding: 4 0 4 0;
+}
+
+.agenda-dia {
+    -fx-background-color: #1a1a1a;
+    -fx-border-color: #2a2a2a;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.agenda-dia:hover {
+    -fx-background-color: #222222;
+}
+
+.agenda-dia-fora {
+    -fx-opacity: 0.45;
+}
+
+.agenda-dia-hoje {
+    -fx-border-color: #E8A838;
+}
+
+.agenda-dia-selecionado {
+    -fx-border-color: #4A9EE8;
+    -fx-border-width: 2;
+}
+
+.agenda-numero {
+    -fx-text-fill: #d0d0d0;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+.agenda-dia-hoje .agenda-numero {
+    -fx-text-fill: #E8A838;
+}
+
+.agenda-item {
+    -fx-font-size: 10px;
+    -fx-padding: 1 4 1 4;
+    -fx-background-radius: 3;
+}
+
+.agenda-item-pendente {
+    -fx-background-color: #2a2412;
+    -fx-text-fill: #E8A838;
+}
+
+.agenda-item-feita {
+    -fx-background-color: #16281b;
+    -fx-text-fill: #4AE87A;
+}
+
+.agenda-item-atrasada {
+    -fx-background-color: #2e1714;
+    -fx-text-fill: #E85C4A;
 }
 
 /* --- XP Block --- */

@@ -1,11 +1,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.controlefinanceiro</groupId>
-    <artifactId>controle-financeiro</artifactId>
-    <version>1.5.4</version>
+    <groupId>com.mycareer</groupId>
+    <artifactId>mycareer</artifactId>
+    <version>1.6.0</version>
     <packaging>jar</packaging>
-    <name>Controle Financeiro Pessoal</name>
-    <description>Sistema de controle financeiro pessoal com JavaFX e SQLite</description>
+    <name>MyCareer</name>
+    <description>Missões, finanças, agenda e estoque pessoais, com JavaFX e SQLite</description>
     <properties>
         <java.version>17</java.version>
         <maven.compiler.source>17</maven.compiler.source>
@@ -87,7 +87,7 @@
                 <version>0.0.8</version>
                 <configuration>
                     <!-- mvn javafx:run usa o module path, então pode iniciar o App direto -->
-                    <mainClass>com.controlefinanceiro/ui.App</mainClass>
+                    <mainClass>com.mycareer/ui.App</mainClass>
                 </configuration>
             </plugin>
             <plugin>
@@ -247,7 +247,7 @@
                                 <goals><goal>exec</goal></goals>
                                 <configuration>
                                     <executable>jpackage</executable>
-                                    <commandlineArgs>--type ${jpackage.tipo} --input ${project.build.directory}/jpackage-input --dest ${project.build.directory}/dist --name ControleFinanceiro --app-version ${project.version} --vendor Hudsola --description "Controle financeiro pessoal" --main-jar ${project.build.finalName}.jar --main-class ${main.class} --icon ${jpackage.icone} ${jpackage.args.so}</commandlineArgs>
+                                    <commandlineArgs>--type ${jpackage.tipo} --input ${project.build.directory}/jpackage-input --dest ${project.build.directory}/dist --name MyCareer --app-version ${project.version} --vendor Hudsola --description "MyCareer" --main-jar ${project.build.finalName}.jar --main-class ${main.class} --icon ${jpackage.icone} ${jpackage.args.so}</commandlineArgs>
                                 </configuration>
                             </execution>
                         </executions>
@@ -268,7 +268,7 @@
                     upgrade-uuid: identificador FIXO do produto; com ele, instalar uma versão nova
                     substitui a anterior em vez de duplicar. Nunca altere esse valor.
                 -->
-                <jpackage.args.so>--win-per-user-install --win-dir-chooser --win-shortcut --win-menu --win-menu-group ControleFinanceiro --win-upgrade-uuid 89538236-735b-49d8-beb2-622656fba504</jpackage.args.so>
+                <jpackage.args.so>--win-per-user-install --win-dir-chooser --win-shortcut --win-menu --win-menu-group MyCareer --win-upgrade-uuid 89538236-735b-49d8-beb2-622656fba504</jpackage.args.so>
                 <jpackage.icone>${project.basedir}/empacotamento/icone.ico</jpackage.icone>
             </properties>
         </profile>
@@ -286,7 +286,7 @@
             <activation><os><family>mac</family></os></activation>
             <properties>
                 <jpackage.tipo>dmg</jpackage.tipo>
-                <jpackage.args.so>--mac-package-name ControleFinanceiro</jpackage.args.so>
+                <jpackage.args.so>--mac-package-name MyCareer</jpackage.args.so>
                 <jpackage.icone>${project.basedir}/empacotamento/icone.icns</jpackage.icone>
             </properties>
         </profile>

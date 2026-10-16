@@ -77,13 +77,13 @@ jobs:
       # --smoke-test: banco temporário, cria um usuário, abre todas as telas e sai (0 = ok)
       - name: Smoke test do JAR
         timeout-minutes: 5
-        run: xvfb-run -a java -jar target/controle-financeiro-*.jar --smoke-test
+        run: xvfb-run -a java -jar target/mycareer-*.jar --smoke-test
 
       - name: Upload do JAR
         uses: actions/upload-artifact@v4
         with:
-          name: controle-financeiro-jar
-          path: target/controle-financeiro-*.jar
+          name: mycareer-jar
+          path: target/mycareer-*.jar
           retention-days: 14
 
   # ─────────────────────────────────────────────
@@ -123,6 +123,9 @@ jobs:
         timeout-minutes: 5
         run: |
           sudo apt-get update
+          # O pós-instalação do .deb cria o atalho no menu (xdg-desktop-menu); o runner, sem ambiente gráfico,
+          # não tem as pastas de menu e a instalação falha com "No writable system menu directory found".
+          sudo mkdir -p /etc/xdg/menus /usr/share/desktop-directories /usr/share/applications
           # Se a instalação falhar, publica o fim do log como anotação (legível sem login no GitHub)
           if ! sudo apt-get install -y ./target/dist/*.deb > instalar-deb.log 2>&1; then
             cat instalar-deb.log
@@ -130,23 +133,23 @@ jobs:
             echo "::error title=Falha ao instalar o .deb::$msg"
             exit 1
           fi
-          xvfb-run -a /opt/controlefinanceiro/bin/ControleFinanceiro --smoke-test
+          xvfb-run -a /opt/mycareer/bin/MyCareer --smoke-test
 
       # macOS: monta o .dmg e abre o app de dentro dele
       - name: Smoke test do instalador (.dmg)
         if: runner.os == 'macOS'
         timeout-minutes: 5
         run: |
-          hdiutil attach target/dist/*.dmg -mountpoint /Volumes/ControleFinanceiro -nobrowse
-          /Volumes/ControleFinanceiro/ControleFinanceiro.app/Contents/MacOS/ControleFinanceiro --smoke-test
-          hdiutil detach /Volumes/ControleFinanceiro
+          hdiutil attach target/dist/*.dmg -mountpoint /Volumes/MyCareer -nobrowse
+          /Volumes/MyCareer/MyCareer.app/Contents/MacOS/MyCareer --smoke-test
+          hdiutil detach /Volumes/MyCareer
 
       # Windows: o .exe é um instalador interativo; testa o JAR que vai dentro dele
       - name: Smoke test do JAR empacotado (Windows)
         if: runner.os == 'Windows'
         timeout-minutes: 5
         shell: bash
-        run: java -jar target/jpackage-input/controle-financeiro-*.jar --smoke-test
+        run: java -jar target/jpackage-input/mycareer-*.jar --smoke-test
 
       - name: Upload do executável nativo
         uses: actions/upload-artifact@v4

@@ -1,4 +1,4 @@
-module com.controlefinanceiro {
+module com.mycareer {
     requires javafx.controls;
     requires javafx.fxml;
     requires javafx.graphics;

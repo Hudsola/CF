@@ -1,4 +1,4 @@
-package ui.financas.cadastros;
+package ui.components;
 
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
@@ -8,8 +8,6 @@ import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.*;
-import service.ControleFinanceiro;
-import ui.components.Ui;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,11 +16,11 @@ import java.util.List;
  * Estrutura comum das abas de cadastro: formulário, botões Salvar/Cancelar, tabela com
  * Editar/Excluir (ou duplo clique para editar) e mensagens de status.
  *
- * As subclasses só descrevem os campos, as colunas e como ler/gravar o item.
+ * As subclasses só descrevem os campos, as colunas e como ler/gravar o item. Usada pelos cadastros de
+ * Finanças e de Missões.
  */
-abstract class AbaCrud<T> {
+public abstract class AbaCrud<T> {
 
-    protected final ControleFinanceiro cf;
     protected final TableView<T> tabela;
     protected final Label lblMsg = new Label();
 
@@ -31,8 +29,7 @@ abstract class AbaCrud<T> {
     private T emEdicao;
     private VBox raiz;
 
-    protected AbaCrud(ControleFinanceiro cf) {
-        this.cf = cf;
+    protected AbaCrud() {
         this.tabela = Ui.tabela("Nenhum registro.");
     }
 
@@ -195,7 +192,7 @@ abstract class AbaCrud<T> {
      * Exclui cada item; os que não puderem ser excluídos (ex: conta com lançamentos) são informados
      * na mensagem, sem impedir a exclusão dos demais.
      */
-    void excluirItens(List<T> itens) {
+    protected void excluirItens(List<T> itens) {
         int excluidos = 0;
         List<String> falhas = new ArrayList<>();
         for (T item : itens) {

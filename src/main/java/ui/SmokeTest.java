@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Teste rápido do app empacotado (JAR ou instalador): {@code ControleFinanceiro --smoke-test}.
+ * Teste rápido do app empacotado (JAR ou instalador): {@code MyCareer --smoke-test}.
  *
  * Usa um banco temporário (os dados do usuário não são tocados), cria um usuário, entra e abre todas as
  * telas. Termina com código 0 se tudo abriu, ou 1 se qualquer erro aconteceu — usado pelo CI.
@@ -38,7 +38,7 @@ final class SmokeTest {
     static void prepararBanco() {
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> falhar(e));
         try {
-            Path pasta = Files.createTempDirectory("controle-financeiro-smoke");
+            Path pasta = Files.createTempDirectory("mycareer-smoke");
             DatabaseManager.setUrl("jdbc:sqlite:" + pasta.resolve("smoke.db"));
         } catch (IOException e) {
             falhar(e);

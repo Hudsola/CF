@@ -12,7 +12,7 @@ import ui.components.Ui;
 import java.time.LocalDate;
 import java.util.List;
 
-class AbaReceitas extends AbaCrud<Receita> {
+class AbaReceitas extends AbaFinancas<Receita> {
 
     private final TextField tfOrigem = Ui.campo("Ex: Salário, Freelance");
     private final TextField tfValor  = Ui.campo("Ex: 1.500,00");

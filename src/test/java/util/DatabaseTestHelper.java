@@ -11,7 +11,7 @@ public class DatabaseTestHelper {
     /** Cria um banco temporário com um usuário (e as categorias padrão dele) e devolve o id desse usuário. */
     public static int setup() {
         try {
-            Path banco = Files.createTempFile("controle_financeiro_test_", ".db");
+            Path banco = Files.createTempFile("mycareer_test_", ".db");
             banco.toFile().deleteOnExit();
 
             DatabaseManager.setUrl("jdbc:sqlite:" + banco.toAbsolutePath());

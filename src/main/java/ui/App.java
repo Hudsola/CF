@@ -37,7 +37,7 @@ public class App extends Application {
         } catch (RuntimeException e) {
             Alert alerta = Ui.comIcone(new Alert(Alert.AlertType.ERROR,
                     e.getMessage() + "\n\nBanco: " + DatabaseManager.arquivoBanco()));
-            alerta.setTitle("Controle Financeiro");
+            alerta.setTitle("MyCareer");
             alerta.setHeaderText("Não foi possível abrir o banco de dados");
             alerta.showAndWait();
             throw e;
@@ -47,7 +47,7 @@ public class App extends Application {
         Scene scene = new Scene(root, 1200, 800);
         scene.getStylesheets().add(getClass().getResource("/css/dark-theme.css").toExternalForm());
 
-        stage.setTitle("Controle Financeiro Pessoal");
+        stage.setTitle("MyCareer");
         stage.getIcons().setAll(Ui.icones());
         stage.setScene(scene);
         stage.setMinWidth(900);

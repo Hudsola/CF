@@ -7,30 +7,33 @@ import javafx.scene.layout.*;
 import model.*;
 import service.CalculadoraXp;
 import service.ControleFinanceiro;
+import service.Missoes;
 import ui.App;
 import ui.components.Ui;
 
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Home: painel do usuário, um card de resumo por aba (com botão para abri-la) e o nível/XP.
- * Missões, Agenda e Estoque aparecem como "em breve" até ganharem funcionalidades.
+ * Estoque aparece como "em breve" até ganhar funcionalidades.
  */
 public class HomeView {
 
     private final ControleFinanceiro cf = ui.Sessao.financeiro();
+    private final Missoes missoes = new Missoes(ui.Sessao.usuario().getId());
 
     public ScrollPane getView() {
         HBox topo = new HBox(12, new PainelUsuario(cf).getView(), criarCardFinancas());
         for (var card : topo.getChildren()) HBox.setHgrow(card, Priority.ALWAYS);
 
-        HBox emBreve = new HBox(12,
-                criarCardEmBreve("MISSÕES", "Objetivos e desafios que rendem XP.", "missoes"),
-                criarCardEmBreve("AGENDA", "Compromissos, lembretes e vencimentos.", "agenda"),
+        HBox outras = new HBox(12,
+                criarCardMissoes(),
+                criarCardAgenda(),
                 criarCardEmBreve("ESTOQUE", "Itens e quantidades.", "estoque"));
-        for (var card : emBreve.getChildren()) HBox.setHgrow(card, Priority.ALWAYS);
+        for (var card : outras.getChildren()) HBox.setHgrow(card, Priority.ALWAYS);
 
-        VBox root = new VBox(16, topo, emBreve, criarBlocoXP());
+        VBox root = new VBox(16, topo, outras, criarBlocoXP());
         root.setPadding(new Insets(20));
         root.getStyleClass().add("main-content");
 
@@ -54,6 +57,49 @@ public class HomeView {
                 linhaValor("Investido", t.investimentos(), Ui.COR_INVESTIMENTO),
                 linhaValor("Saldo do mês", t.saldo(), t.saldo().signum() >= 0 ? Ui.COR_RECEITA : Ui.COR_DESPESA));
         return cardAba("FINANÇAS — " + mes, linhas, "Abrir Finanças", "financas");
+    }
+
+    /** Missões: o que falta hoje, o que já foi feito, atrasadas e objetivos em andamento. */
+    private VBox criarCardMissoes() {
+        Missoes.Resumo r = missoes.resumo();
+        VBox linhas = new VBox(6,
+                linhaNumero("Pendentes hoje", r.pendentesHoje(), r.pendentesHoje() > 0 ? Ui.COR_DESTAQUE : Ui.COR_RECEITA),
+                linhaNumero("Feitas hoje", r.feitasHoje(), Ui.COR_RECEITA),
+                linhaNumero("Atrasadas (7 dias)", r.atrasadas(), r.atrasadas() > 0 ? Ui.COR_DESPESA : Ui.COR_RECEITA),
+                linhaNumero("Objetivos em andamento", r.semPrazoEmAndamento(), Ui.COR_INVESTIMENTO));
+        return cardAba("MISSÕES — HOJE", linhas, "Abrir Missões", "missoes");
+    }
+
+    /** Agenda: as próximas missões dos próximos 7 dias. */
+    private VBox criarCardAgenda() {
+        LocalDate hoje = missoes.hoje();
+        List<OcorrenciaMissao> proximas = missoes.ocorrencias(hoje, hoje.plusDays(6)).stream()
+                .filter(o -> !o.concluida()).limit(4).toList();
+        VBox linhas = new VBox(4);
+        if (proximas.isEmpty()) {
+            Label vazio = new Label("Nada pendente nos próximos 7 dias.");
+            vazio.getStyleClass().add("form-label");
+            linhas.getChildren().add(vazio);
+        }
+        for (OcorrenciaMissao o : proximas) {
+            Label l = new Label(Ui.diaCurto(o.data()) + "  ·  " + o.missao().titulo());
+            l.getStyleClass().add("form-label");
+            linhas.getChildren().add(l);
+        }
+        return cardAba("AGENDA — PRÓXIMOS 7 DIAS", linhas, "Abrir Agenda", "agenda");
+    }
+
+    private static HBox linhaNumero(String nome, int valor, String cor) {
+        Label lblNome = new Label(nome);
+        lblNome.getStyleClass().add("form-label");
+        Label lblValor = new Label(String.valueOf(valor));
+        lblValor.getStyleClass().add("card-linha-valor");
+        lblValor.setStyle("-fx-text-fill: " + cor + ";");
+        Region espaco = new Region();
+        HBox.setHgrow(espaco, Priority.ALWAYS);
+        HBox linha = new HBox(8, lblNome, espaco, lblValor);
+        linha.setAlignment(Pos.BASELINE_LEFT);
+        return linha;
     }
 
     private VBox criarCardEmBreve(String titulo, String descricao, String tela) {
@@ -124,7 +170,9 @@ public class HomeView {
         lblDetalhe.getStyleClass().add("xp-detalhe");
 
         Label lblRegras = new Label(String.format(
-                "Como ganhar XP: +%d por lançamento registrado • +%d por mês encerrado com saldo positivo • +%d por mês com investimento",
+                "Como ganhar XP: +%d por dia de missão cumprido • +%d por objetivo sem prazo cumprido • +%d por lançamento registrado • "
+                        + "+%d por mês encerrado com saldo positivo • +%d por mês com investimento",
+                CalculadoraXp.XP_POR_MISSAO, CalculadoraXp.XP_MISSAO_SEM_PRAZO,
                 CalculadoraXp.XP_POR_LANCAMENTO, CalculadoraXp.XP_MES_POSITIVO, CalculadoraXp.XP_MES_COM_INVESTIMENTO));
         lblRegras.getStyleClass().add("xp-detalhe");
         lblRegras.setWrapText(true);

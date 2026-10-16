@@ -17,7 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Gera o ícone do app ("CF" inclinado na fonte do GTA, em ouro polido, num quadrado preto com filete dourado).
+ * Gera o ícone do app ("MC" inclinado na fonte do GTA, em ouro polido, num quadrado preto com filete dourado).
  *
  * Rode a partir da raiz do projeto:  java ferramentas/GerarIcone.java
  *
@@ -71,15 +71,15 @@ public class GerarIcone {
         g.setStroke(new BasicStroke((float) borda, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         g.draw(caixa);
 
-        Shape cf = new TextLayout("CF", fonte, g.getFontRenderContext()).getOutline(null);
-        cf = AffineTransform.getShearInstance(-INCLINACAO, 0).createTransformedShape(cf);
-        Rectangle2D b = cf.getBounds2D();
+        Shape sigla = new TextLayout("MC", fonte, g.getFontRenderContext()).getOutline(null);
+        sigla = AffineTransform.getShearInstance(-INCLINACAO, 0).createTransformedShape(sigla);
+        Rectangle2D b = sigla.getBounds2D();
         double esc = Math.min(230 / b.getHeight(), 340 / b.getWidth());
         AffineTransform t = new AffineTransform();
         t.translate(256 - b.getWidth() * esc / 2, 256 - b.getHeight() * esc / 2);
         t.scale(esc, esc);
         t.translate(-b.getX(), -b.getY());
-        Shape letras = t.createTransformedShape(cf);
+        Shape letras = t.createTransformedShape(sigla);
         g.setColor(Color.BLACK);
         g.setStroke(new BasicStroke(6, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         g.draw(letras);
