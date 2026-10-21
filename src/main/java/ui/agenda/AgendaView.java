@@ -139,8 +139,9 @@ public class AgendaView {
 
         for (int i = 0; i < Math.min(ITENS_POR_DIA, doDia.size()); i++) {
             OcorrenciaMissao o = doDia.get(i);
-            Label item = new Label(o.missao().titulo());
+            Label item = new Label((o.missao().principal() ? "★ " : "") + o.missao().titulo());
             item.getStyleClass().add("agenda-item");
+            if (o.missao().principal()) item.getStyleClass().add("agenda-item-principal");
             item.getStyleClass().add(o.concluida() ? "agenda-item-feita"
                     : o.atrasada(missoes.hoje()) ? "agenda-item-atrasada" : "agenda-item-pendente");
             item.setMaxWidth(Double.MAX_VALUE);

@@ -241,6 +241,34 @@
     -fx-text-fill: #6f6f6f;
 }
 
+/* missão principal (história): dourada e em negrito */
+.missao-principal {
+    -fx-text-fill: #E8A838;
+    -fx-font-weight: bold;
+}
+
+.estrela-principal {
+    -fx-text-fill: #E8A838;
+    -fx-font-size: 14px;
+}
+
+.objetivo {
+    -fx-padding: 6 0 2 0;
+}
+
+.dark-table .linha-principal .table-cell {
+    -fx-text-fill: #E8A838;
+    -fx-font-weight: bold;
+}
+
+.dark-table .linha-sub .table-cell {
+    -fx-text-fill: #9a9a9a;
+}
+
+.agenda-item-principal {
+    -fx-font-weight: bold;
+}
+
 .missao-feita .text {
     -fx-strikethrough: true;
 }

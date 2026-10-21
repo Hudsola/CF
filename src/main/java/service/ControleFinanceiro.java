@@ -55,7 +55,7 @@ public class ControleFinanceiro {
     public Progresso getProgresso() {
         var missoes = new repository.MissaoRepository(usuarioId);
         return CalculadoraXp.calcular(getReceitas(), getDespesas(), getInvestimentos(),
-                missoes.totalConclusoes(), missoes.totalSemPrazoConcluidas(), LocalDate.now());
+                CalculadoraXp.xpDeMissoes(missoes.totalConclusoes(), missoes.totalSemPrazoConcluidas()), LocalDate.now());
     }
 
     // --- Categorias ---

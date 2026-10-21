@@ -1,5 +1,6 @@
 package service;
 
+import model.CategoriaMissao;
 import model.Missao;
 import model.OcorrenciaMissao;
 import model.TipoMissao;
@@ -213,7 +214,7 @@ class MissoesTest {
 
         assertTrue(missoes.ocorrencias(HOJE.minusDays(1), HOJE.minusDays(1)).isEmpty());
         assertTrue(missoes.doDia(HOJE).get(0).concluida());
-        assertEquals(1, new repository.MissaoRepository(usuario).totalConclusoes(), "a conclusão de ontem não conta mais XP");
+        assertEquals(1, new repository.MissaoRepository(usuario).totalConclusoes().get(model.CategoriaMissao.SECUNDARIA), "a conclusão de ontem não conta mais XP");
     }
 
     @Test
@@ -263,5 +264,157 @@ class MissoesTest {
         dele.desfazerConclusao(minha.id(), HOJE);
         assertTrue(missoes.doDia(HOJE).get(0).concluida());
         assertEquals(1, missoes.listar().size());
+    }
+
+    // --- Principais, secundárias e sub-missões ---
+
+    private Missao miojo() {
+        return missoes.criar(Missao.semPrazo("Miojo", null).comCategoria(CategoriaMissao.PRINCIPAL));
+    }
+
+    private Missao requisito(Missao mae, String titulo) {
+        return missoes.criar(Missao.semPrazo(titulo, null).comMissaoPai(mae.id()));
+    }
+
+    @Test
+    void novaMissaoEhSecundariaPorPadraoEACategoriaEhGravada() {
+        Missao sec = missoes.criar(Missao.semPrazo("Ler um livro", null));
+        Missao pri = miojo();
+        assertEquals(CategoriaMissao.SECUNDARIA, missoes.buscar(sec.id()).orElseThrow().categoria());
+        assertEquals(CategoriaMissao.PRINCIPAL, missoes.buscar(pri.id()).orElseThrow().categoria());
+        assertTrue(missoes.buscar(pri.id()).orElseThrow().principal());
+    }
+
+    @Test
+    void subMissaoHerdaACategoriaDaMaeEAcompanhaAMudanca() {
+        Missao mae = miojo();
+        Missao agua = missoes.criar(Missao.semPrazo("Água", null).comMissaoPai(mae.id())
+                .comCategoria(CategoriaMissao.SECUNDARIA));
+        assertEquals(CategoriaMissao.PRINCIPAL, missoes.buscar(agua.id()).orElseThrow().categoria(), "herdou da mãe");
+        assertEquals(mae.id(), missoes.buscar(agua.id()).orElseThrow().missaoPaiId());
+
+        missoes.atualizar(missoes.buscar(mae.id()).orElseThrow().comCategoria(CategoriaMissao.SECUNDARIA));
+        assertEquals(CategoriaMissao.SECUNDARIA, missoes.buscar(agua.id()).orElseThrow().categoria());
+    }
+
+    @Test
+    void soExisteUmNivelDeSubMissoes() {
+        Missao mae = miojo();
+        Missao fogo = requisito(mae, "Fogo");
+        Missao outra = missoes.criar(Missao.semPrazo("Outra", null));
+
+        var ex = assertThrows(IllegalArgumentException.class,
+                () -> missoes.criar(Missao.semPrazo("Comprar gás", null).comMissaoPai(fogo.id())));
+        assertTrue(ex.getMessage().contains("só existe um nível"));
+        assertThrows(IllegalArgumentException.class,
+                () -> missoes.atualizar(missoes.buscar(mae.id()).orElseThrow().comMissaoPai(outra.id())),
+                "quem tem sub-missões não vira sub-missão");
+        assertThrows(IllegalArgumentException.class,
+                () -> missoes.atualizar(outra.comMissaoPai(outra.id())), "mãe de si mesma");
+        assertThrows(IllegalArgumentException.class,
+                () -> missoes.criar(Missao.semPrazo("X", null).comMissaoPai(999)), "mãe inexistente");
+
+        assertEquals(List.of(), missoes.possiveisMaes(mae.id()), "tem filhas: não pode ter mãe");
+        assertEquals(List.of("Miojo", "Outra"), missoes.possiveisMaes(0).stream().map(Missao::titulo).toList());
+        assertEquals(List.of("Miojo"), missoes.possiveisMaes(outra.id()).stream().map(Missao::titulo).toList());
+    }
+
+    @Test
+    void missaoDeOutroUsuarioNaoPodeSerMae() {
+        Missao mae = miojo();
+        Missoes dele = new Missoes(DatabaseTestHelper.novoUsuario("outro"));
+        assertThrows(IllegalArgumentException.class, () -> dele.criar(Missao.semPrazo("X", null).comMissaoPai(mae.id())));
+    }
+
+    @Test
+    void missaoMaeSoEhConcluidaDepoisDosRequisitos() {
+        Missao mae = miojo();
+        Missao agua = requisito(mae, "Água");
+        Missao fogo = requisito(mae, "Fogo");
+        requisito(mae, "Macarrão");
+
+        var ex = assertThrows(IllegalArgumentException.class, () -> missoes.concluirSemPrazo(mae.id()));
+        assertEquals("Antes de concluir \"Miojo\", cumpra os 3 requisitos: Água, Fogo, Macarrão.", ex.getMessage());
+
+        missoes.concluirSemPrazo(agua.id());
+        missoes.concluirSemPrazo(fogo.id());
+        ex = assertThrows(IllegalArgumentException.class, () -> missoes.concluirSemPrazo(mae.id()));
+        assertEquals("Antes de concluir \"Miojo\", cumpra o requisito: Macarrão.", ex.getMessage());
+
+        missoes.requisitosPendentes(mae.id()).forEach(r -> missoes.concluirSemPrazo(r.id()));
+        missoes.concluirSemPrazo(mae.id());
+        assertEquals(HOJE, missoes.buscar(mae.id()).orElseThrow().concluidaEm());
+
+        var reabrir = assertThrows(IllegalArgumentException.class, () -> missoes.reabrirSemPrazo(agua.id()));
+        assertTrue(reabrir.getMessage().contains("reabra ela antes"));
+        missoes.reabrirSemPrazo(mae.id());
+        missoes.reabrirSemPrazo(agua.id());
+        assertEquals(List.of("Água"), missoes.requisitosPendentes(mae.id()).stream().map(Missao::titulo).toList());
+    }
+
+    @Test
+    void subMissoesRecorrentesNaoBloqueiamAMaeERequisitosBloqueiamMaeRecorrente() {
+        Missao ingles = missoes.criar(Missao.semPrazo("Aprender inglês", null).comCategoria(CategoriaMissao.PRINCIPAL));
+        Missao estudar = missoes.criar(Missao.semanal("Estudar inglês", null, EnumSet.of(MONDAY, WEDNESDAY, FRIDAY), HOJE, null)
+                .comMissaoPai(ingles.id()));
+        assertFalse(estudar.requisito());
+        assertTrue(missoes.requisitosPendentes(ingles.id()).isEmpty());
+        missoes.concluirSemPrazo(ingles.id());   // o hábito semanal não bloqueia
+
+        Missao treino = missoes.criar(Missao.semanal("Treino", null, EnumSet.of(THURSDAY), HOJE, null));
+        Missao tenis = requisito(treino, "Comprar tênis");
+        assertThrows(IllegalArgumentException.class, () -> missoes.concluir(treino.id(), HOJE), "falta o tênis");
+        missoes.concluirSemPrazo(tenis.id());
+        missoes.concluir(treino.id(), HOJE);
+        assertTrue(missoes.doDia(HOJE).stream().filter(o -> o.missao().id() == treino.id()).findFirst().orElseThrow().concluida());
+    }
+
+    @Test
+    void excluirMaeExcluiAsSubMissoesEAsConclusoesDelas() {
+        Missao mae = miojo();
+        Missao agua = requisito(mae, "Água");
+        Missao diaria = missoes.criar(Missao.diaria("Ferver", null, List.of(HOJE)).comMissaoPai(mae.id()));
+        missoes.concluirSemPrazo(agua.id());
+        missoes.concluir(diaria.id(), HOJE);
+        Missao outra = missoes.criar(Missao.semPrazo("Outra", null));
+
+        missoes.excluir(mae.id());
+
+        assertEquals(List.of("Outra"), missoes.listar().stream().map(Missao::titulo).toList());
+        assertTrue(missoes.doDia(HOJE).isEmpty());
+        var repo = new repository.MissaoRepository(usuario);
+        assertEquals(0, repo.totalConclusoes().values().stream().mapToInt(Integer::intValue).sum());
+        assertEquals(0, repo.totalSemPrazoConcluidas().values().stream().mapToInt(Integer::intValue).sum());
+        assertNotNull(outra);
+    }
+
+    @Test
+    void listarEmOrdemMostraPrincipaisPrimeiroECadaMaeSeguidaDasSubMissoes() {
+        missoes.criar(Missao.semPrazo("Arrumar a casa", null));
+        Missao mae = miojo();
+        requisito(mae, "Fogo");
+        requisito(mae, "Água");
+        Missao carreira = missoes.criar(Missao.semPrazo("Carreira", null).comCategoria(CategoriaMissao.PRINCIPAL));
+        requisito(carreira, "Currículo");
+
+        assertEquals(List.of("Carreira", "Currículo", "Miojo", "Água", "Fogo", "Arrumar a casa"),
+                missoes.listarEmOrdem().stream().map(Missao::titulo).toList());
+    }
+
+    @Test
+    void missoesPrincipaisValemODobroDeXp() {
+        ControleFinanceiro cf = new ControleFinanceiro(usuario);
+        int xp0 = cf.getProgresso().xpTotal();
+        Missao principal = missoes.criar(Missao.diaria("Entrevista", null, List.of(HOJE)).comCategoria(CategoriaMissao.PRINCIPAL));
+        Missao secundaria = missoes.criar(Missao.diaria("Lavar o carro", null, List.of(HOJE)));
+        Missao objetivo = missoes.criar(Missao.semPrazo("Moto", null).comCategoria(CategoriaMissao.PRINCIPAL));
+
+        missoes.concluir(principal.id(), HOJE);
+        missoes.concluir(secundaria.id(), HOJE);
+        missoes.concluirSemPrazo(objetivo.id());
+
+        assertEquals(40, CalculadoraXp.xpPorDia(CategoriaMissao.PRINCIPAL));
+        assertEquals(200, CalculadoraXp.xpPorObjetivo(CategoriaMissao.PRINCIPAL));
+        assertEquals(xp0 + 40 + 20 + 200, cf.getProgresso().xpTotal());
     }
 }

@@ -1,6 +1,7 @@
 package repository;
 
 import db.DatabaseManager;
+import model.CategoriaMissao;
 import model.Missao;
 import model.TipoMissao;
 
@@ -24,8 +25,19 @@ public class MissaoRepository {
                     datas.computeIfAbsent(rs.getInt(1), k -> new TreeSet<>()).add(LocalDate.parse(rs.getString(2)));
                     return null;
                 }, "datas das missões");
-        return Consultas.listar("SELECT * FROM missoes WHERE usuario_id = ? ORDER BY titulo COLLATE NOCASE",
-                List.of(usuarioId), rs -> ler(rs, datas.getOrDefault(rs.getInt("id"), new TreeSet<>())), "missões");
+        List<Missao> missoes = new ArrayList<>(Consultas.listar("SELECT * FROM missoes WHERE usuario_id = ?",
+                List.of(usuarioId), rs -> ler(rs, datas.getOrDefault(rs.getInt("id"), new TreeSet<>())), "missões"));
+        missoes.sort(Comparator.comparing(Missao::titulo, ORDEM_ALFABETICA));
+        return missoes;
+    }
+
+    /** Ordem alfabética do português: ignora maiúsculas e acentos ("Água" vem antes de "Fogo"), o que o SQLite não faz. */
+    private static final Comparator<String> ORDEM_ALFABETICA = ordemAlfabetica();
+
+    private static Comparator<String> ordemAlfabetica() {
+        java.text.Collator c = java.text.Collator.getInstance(Locale.forLanguageTag("pt-BR"));
+        c.setStrength(java.text.Collator.PRIMARY);
+        return c::compare;
     }
 
     public Optional<Missao> buscar(int id) {
@@ -42,7 +54,7 @@ public class MissaoRepository {
             conn.setAutoCommit(false);
             try (PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO missoes (usuario_id, titulo, descricao, tipo, dias_semana, dia_mes, data_inicio, data_fim, "
-                            + "concluida_em, criada_em) VALUES (?,?,?,?,?,?,?,?,?, datetime('now','localtime'))",
+                            + "concluida_em, categoria, missao_pai_id, criada_em) VALUES (?,?,?,?,?,?,?,?,?,?,?, datetime('now','localtime'))",
                     Statement.RETURN_GENERATED_KEYS)) {
                 ps.setInt(1, usuarioId);
                 preencher(ps, 2, m);
@@ -67,7 +79,8 @@ public class MissaoRepository {
         try (Connection conn = DatabaseManager.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement ps = conn.prepareStatement("UPDATE missoes SET titulo=?, descricao=?, tipo=?, "
-                    + "dias_semana=?, dia_mes=?, data_inicio=?, data_fim=?, concluida_em=? WHERE id=? AND usuario_id=?");
+                    + "dias_semana=?, dia_mes=?, data_inicio=?, data_fim=?, concluida_em=?, categoria=?, missao_pai_id=? "
+                    + "WHERE id=? AND usuario_id=?");
                  PreparedStatement del = conn.prepareStatement("DELETE FROM missao_datas WHERE missao_id=?");
                  PreparedStatement conclusoes = conn.prepareStatement("SELECT data FROM missao_conclusoes WHERE missao_id=?");
                  PreparedStatement delConclusao = conn.prepareStatement(
@@ -97,17 +110,22 @@ public class MissaoRepository {
         }
     }
 
-    /** Exclui a missão com os dias e as conclusões dela. */
+    /** Exclui a missão, as sub-missões dela e os dias e as conclusões de todas, numa única transação. */
     public void excluir(int id) {
         if (!pertence(id)) throw new RuntimeException("Missão não encontrada com ID " + id);
         try (Connection conn = DatabaseManager.getConnection()) {
             conn.setAutoCommit(false);
-            try (PreparedStatement d1 = conn.prepareStatement("DELETE FROM missao_datas WHERE missao_id=?");
-                 PreparedStatement d2 = conn.prepareStatement("DELETE FROM missao_conclusoes WHERE missao_id=?");
-                 PreparedStatement d3 = conn.prepareStatement("DELETE FROM missoes WHERE id=? AND usuario_id=?")) {
-                d1.setInt(1, id); d1.executeUpdate();
-                d2.setInt(1, id); d2.executeUpdate();
+            String daFamilia = " IN (SELECT id FROM missoes WHERE (id = ? OR missao_pai_id = ?) AND usuario_id = ?)";
+            try (PreparedStatement d1 = conn.prepareStatement("DELETE FROM missao_datas WHERE missao_id" + daFamilia);
+                 PreparedStatement d2 = conn.prepareStatement("DELETE FROM missao_conclusoes WHERE missao_id" + daFamilia);
+                 PreparedStatement d3 = conn.prepareStatement("DELETE FROM missoes WHERE missao_pai_id=? AND usuario_id=?");
+                 PreparedStatement d4 = conn.prepareStatement("DELETE FROM missoes WHERE id=? AND usuario_id=?")) {
+                for (PreparedStatement ps : List.of(d1, d2)) {
+                    ps.setInt(1, id); ps.setInt(2, id); ps.setInt(3, usuarioId);
+                    ps.executeUpdate();
+                }
                 d3.setInt(1, id); d3.setInt(2, usuarioId); d3.executeUpdate();
+                d4.setInt(1, id); d4.setInt(2, usuarioId); d4.executeUpdate();
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
@@ -132,16 +150,29 @@ public class MissaoRepository {
         return mapa;
     }
 
-    /** Quantas ocorrências de missões o usuário já cumpriu (para o XP). */
-    public int totalConclusoes() {
-        return Consultas.listar("SELECT COUNT(*) FROM missao_conclusoes c JOIN missoes m ON m.id = c.missao_id "
-                + "WHERE m.usuario_id = ?", List.of(usuarioId), rs -> rs.getInt(1), "conclusões").get(0);
+    /** Quantas ocorrências de missões o usuário já cumpriu, por categoria (para o XP). */
+    public Map<CategoriaMissao, Integer> totalConclusoes() {
+        return porCategoria("SELECT m.categoria, COUNT(*) FROM missao_conclusoes c JOIN missoes m ON m.id = c.missao_id "
+                + "WHERE m.usuario_id = ? GROUP BY m.categoria", List.of(usuarioId));
     }
 
-    /** Quantas missões sem prazo o usuário já cumpriu (para o XP). */
-    public int totalSemPrazoConcluidas() {
-        return Consultas.listar("SELECT COUNT(*) FROM missoes WHERE usuario_id = ? AND tipo = ? AND concluida_em IS NOT NULL",
-                List.of(usuarioId, TipoMissao.SEM_PRAZO.name()), rs -> rs.getInt(1), "missões").get(0);
+    /** Quantas missões sem prazo o usuário já cumpriu, por categoria (para o XP). */
+    public Map<CategoriaMissao, Integer> totalSemPrazoConcluidas() {
+        return porCategoria("SELECT categoria, COUNT(*) FROM missoes WHERE usuario_id = ? AND tipo = ? "
+                + "AND concluida_em IS NOT NULL GROUP BY categoria", List.of(usuarioId, TipoMissao.SEM_PRAZO.name()));
+    }
+
+    private static Map<CategoriaMissao, Integer> porCategoria(String sql, List<Object> params) {
+        Map<CategoriaMissao, Integer> mapa = new EnumMap<>(CategoriaMissao.class);
+        for (CategoriaMissao c : CategoriaMissao.values()) mapa.put(c, 0);
+        Consultas.listar(sql, params, rs -> mapa.put(CategoriaMissao.valueOf(rs.getString(1)), rs.getInt(2)), "conclusões");
+        return mapa;
+    }
+
+    /** Sub-missões acompanham a categoria da mãe. */
+    public void definirCategoriaDasSubMissoes(int paiId, CategoriaMissao categoria) {
+        executar("UPDATE missoes SET categoria = ? WHERE missao_pai_id = ? AND usuario_id = ?",
+                categoria.name(), paiId, usuarioId);
     }
 
     public void marcarConcluida(int missaoId, LocalDate dia) {
@@ -163,7 +194,7 @@ public class MissaoRepository {
 
     // --- Auxiliares ---
 
-    /** Preenche titulo..concluida_em a partir da posição {@code i}; devolve a próxima posição livre. */
+    /** Preenche titulo..missao_pai_id a partir da posição {@code i}; devolve a próxima posição livre. */
     private static int preencher(PreparedStatement ps, int i, Missao m) throws SQLException {
         ps.setString(i++, m.titulo());
         ps.setString(i++, m.descricao());
@@ -174,6 +205,8 @@ public class MissaoRepository {
         ps.setString(i++, m.inicio() != null ? m.inicio().toString() : null);
         ps.setString(i++, m.fim() != null ? m.fim().toString() : null);
         ps.setString(i++, m.concluidaEm() != null ? m.concluidaEm().toString() : null);
+        ps.setString(i++, m.categoria().name());
+        if (m.missaoPaiId() != null) ps.setInt(i++, m.missaoPaiId()); else ps.setNull(i++, Types.INTEGER);
         return i;
     }
 
@@ -193,9 +226,12 @@ public class MissaoRepository {
                 : Arrays.stream(dias.split(",")).map(s -> DayOfWeek.of(Integer.parseInt(s.trim()))).collect(Collectors.toSet());
         int diaMes = rs.getInt("dia_mes");
         Integer dia = rs.wasNull() ? null : diaMes;
+        int paiId = rs.getInt("missao_pai_id");
+        Integer pai = rs.wasNull() ? null : paiId;
         return new Missao(rs.getInt("id"), rs.getString("titulo"), rs.getString("descricao"),
                 TipoMissao.valueOf(rs.getString("tipo")), datas, diasSemana, dia,
-                data(rs.getString("data_inicio")), data(rs.getString("data_fim")), data(rs.getString("concluida_em")));
+                data(rs.getString("data_inicio")), data(rs.getString("data_fim")), data(rs.getString("concluida_em")),
+                CategoriaMissao.valueOf(rs.getString("categoria")), pai);
     }
 
     private static LocalDate data(String s) {

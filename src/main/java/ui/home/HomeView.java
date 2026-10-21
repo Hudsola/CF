@@ -170,8 +170,8 @@ public class HomeView {
         lblDetalhe.getStyleClass().add("xp-detalhe");
 
         Label lblRegras = new Label(String.format(
-                "Como ganhar XP: +%d por dia de missão cumprido • +%d por objetivo sem prazo cumprido • +%d por lançamento registrado • "
-                        + "+%d por mês encerrado com saldo positivo • +%d por mês com investimento",
+                "Como ganhar XP: +%d por dia de missão cumprido • +%d por objetivo sem prazo cumprido (missões principais valem "
+                        + "o dobro) • +%d por lançamento registrado • +%d por mês encerrado com saldo positivo • +%d por mês com investimento",
                 CalculadoraXp.XP_POR_MISSAO, CalculadoraXp.XP_MISSAO_SEM_PRAZO,
                 CalculadoraXp.XP_POR_LANCAMENTO, CalculadoraXp.XP_MES_POSITIVO, CalculadoraXp.XP_MES_COM_INVESTIMENTO));
         lblRegras.getStyleClass().add("xp-detalhe");

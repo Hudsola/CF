@@ -38,8 +38,14 @@ public class ListaMissoes extends VBox {
         lblMsg.managedProperty().bind(lblMsg.textProperty().isNotEmpty());
     }
 
+    /** Título de cada missão, para mostrar de qual missão-mãe uma sub-missão faz parte. */
+    private java.util.Map<Integer, String> titulos = java.util.Map.of();
+
     public void mostrar(List<OcorrenciaMissao> ocorrencias, String textoVazio) {
         getChildren().clear();
+        titulos = ocorrencias.stream().anyMatch(o -> o.missao().subMissao())
+                ? missoes.listar().stream().collect(java.util.stream.Collectors.toMap(m -> m.id(), m -> m.titulo()))
+                : java.util.Map.of();
         if (ocorrencias.isEmpty()) {
             Label vazio = new Label(textoVazio);
             vazio.getStyleClass().add("empty-label");
@@ -55,13 +61,14 @@ public class ListaMissoes extends VBox {
         boolean futuro = o.data().isAfter(missoes.hoje());
         marcar.setDisable(futuro);
         marcar.setTooltip(new Tooltip(futuro ? "Esse dia ainda não chegou."
-                : o.concluida() ? "Desmarcar (desfaz a conclusão)" : "Marcar como feita (+" + CalculadoraXp.XP_POR_MISSAO + " XP)"));
+                : o.concluida() ? "Desmarcar (desfaz a conclusão)" : "Marcar como feita (+" + CalculadoraXp.xpPorDia(o.missao().categoria()) + " XP)"));
         marcar.setOnAction(e -> alternar(o, marcar));
 
         Label titulo = new Label(o.missao().titulo());
-        titulo.getStyleClass().add("missao-titulo");
+        titulo.getStyleClass().addAll("missao-titulo", o.missao().principal() ? "missao-principal" : "missao-secundaria");
         if (o.concluida()) titulo.getStyleClass().add("missao-feita");
-        String detalhe = o.missao().tipo().nome() + " · " + o.missao().quando();
+        String detalhe = o.missao().categoria().nome() + " · " + o.missao().tipo().nome() + " · " + o.missao().quando();
+        if (o.missao().subMissao()) detalhe = "↳ de " + titulos.getOrDefault(o.missao().missaoPaiId(), "?") + " · " + detalhe;
         if (mostrarData) detalhe = Ui.diaCurto(o.data()) + " · " + detalhe;
         if (o.atrasada(missoes.hoje())) {
             detalhe = "atrasada · " + detalhe;
@@ -70,7 +77,15 @@ public class ListaMissoes extends VBox {
         Label lblDetalhe = new Label(detalhe);
         lblDetalhe.getStyleClass().add("form-label");
 
-        HBox linha = new HBox(10, marcar, new VBox(2, titulo, lblDetalhe));
+        HBox linha = new HBox(10, marcar);
+        if (o.missao().principal()) {
+            Label estrela = new Label("★");
+            estrela.getStyleClass().add("estrela-principal");
+            estrela.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);   // não vira "…" quando falta espaço
+            estrela.setTooltip(new Tooltip("Missão principal (vale o dobro de XP)"));
+            linha.getChildren().add(estrela);
+        }
+        linha.getChildren().add(new VBox(2, titulo, lblDetalhe));
         linha.setAlignment(Pos.CENTER_LEFT);
         linha.getStyleClass().add("missao-item");
         return linha;

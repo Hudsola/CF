@@ -1,5 +1,6 @@
 package service;
 
+import model.CategoriaMissao;
 import model.Missao;
 import model.OcorrenciaMissao;
 import model.TipoMissao;
@@ -38,29 +39,89 @@ public class Missoes {
 
     // --- Cadastro ---
 
+    /** Todas as missões, em ordem alfabética. */
     public List<Missao> listar() { return repo.listarTodas(); }
+
+    /**
+     * Para exibir: principais antes das secundárias e cada missão seguida das suas sub-missões
+     * (todas em ordem alfabética).
+     */
+    public List<Missao> listarEmOrdem() {
+        List<Missao> todas = repo.listarTodas();
+        List<Missao> ordem = new ArrayList<>();
+        for (CategoriaMissao c : CategoriaMissao.values())
+            for (Missao m : todas)
+                if (!m.subMissao() && m.categoria() == c) {
+                    ordem.add(m);
+                    for (Missao sub : todas) if (Objects.equals(sub.missaoPaiId(), m.id())) ordem.add(sub);
+                }
+        return ordem;
+    }
 
     public Optional<Missao> buscar(int id) { return repo.buscar(id); }
 
-    /** Valida e grava uma missão nova; devolve ela com o id. */
-    public Missao criar(Missao m) {
-        validar(m);
-        return m.comConclusao(null).comId(repo.salvar(m.comConclusao(null)));
+    public List<Missao> subMissoes(int paiId) {
+        return repo.listarTodas().stream().filter(m -> Objects.equals(m.missaoPaiId(), paiId)).toList();
     }
 
-    /** Altera título, descrição, tipo e datas. A conclusão de uma missão sem prazo é mantida. */
+    /** Requisitos (sub-missões sem prazo) da missão que ainda não foram cumpridos. */
+    public List<Missao> requisitosPendentes(int paiId) {
+        return subMissoes(paiId).stream().filter(m -> m.requisito() && m.concluidaEm() == null).toList();
+    }
+
+    /** Missões que podem ser escolhidas como mãe de {@code missaoId} (0 = missão nova). */
+    public List<Missao> possiveisMaes(int missaoId) {
+        boolean temFilhas = missaoId != 0 && !subMissoes(missaoId).isEmpty();
+        if (temFilhas) return List.of();   // quem tem sub-missões não pode virar sub-missão (um nível só)
+        return listarEmOrdem().stream().filter(m -> !m.subMissao() && m.id() != missaoId).toList();
+    }
+
+    /**
+     * Valida e grava uma missão nova; devolve ela com o id. Uma sub-missão recebe a categoria da mãe.
+     */
+    public Missao criar(Missao m) {
+        Missao nova = ajustarCategoria(m).comConclusao(null);
+        validar(nova);
+        validarHierarquia(nova);
+        return nova.comId(repo.salvar(nova));
+    }
+
+    /**
+     * Altera a missão. A conclusão de uma missão sem prazo é mantida; mudar a categoria de uma missão-mãe muda
+     * também a das sub-missões.
+     */
     public void atualizar(Missao m) {
         Missao atual = repo.buscar(m.id()).orElseThrow(() -> new IllegalArgumentException("Missão não encontrada."));
-        validar(m);
-        LocalDate conclusao = m.tipo() == TipoMissao.SEM_PRAZO && atual.tipo() == TipoMissao.SEM_PRAZO ? atual.concluidaEm() : null;
-        repo.atualizar(m.comConclusao(conclusao));
+        Missao nova = ajustarCategoria(m);
+        validar(nova);
+        validarHierarquia(nova);
+        LocalDate conclusao = nova.tipo() == TipoMissao.SEM_PRAZO && atual.tipo() == TipoMissao.SEM_PRAZO ? atual.concluidaEm() : null;
+        repo.atualizar(nova.comConclusao(conclusao));
+        if (!nova.subMissao()) repo.definirCategoriaDasSubMissoes(nova.id(), nova.categoria());
     }
 
+    /** Exclui a missão e as sub-missões dela. */
     public void excluir(int id) { repo.excluir(id); }
+
+    private Missao ajustarCategoria(Missao m) {
+        if (!m.subMissao()) return m;
+        return repo.buscar(m.missaoPaiId()).map(mae -> m.comCategoria(mae.categoria())).orElse(m);
+    }
+
+    private void validarHierarquia(Missao m) {
+        if (!m.subMissao()) return;
+        if (m.missaoPaiId() == m.id()) throw new IllegalArgumentException("Uma missão não pode ser sub-missão dela mesma.");
+        Missao mae = repo.buscar(m.missaoPaiId())
+                .orElseThrow(() -> new IllegalArgumentException("Missão-mãe não encontrada."));
+        if (mae.subMissao())
+            throw new IllegalArgumentException("\"" + mae.titulo() + "\" já é uma sub-missão; só existe um nível de sub-missões.");
+        if (m.id() != 0 && !subMissoes(m.id()).isEmpty())
+            throw new IllegalArgumentException("Esta missão tem sub-missões, então não pode virar sub-missão de outra.");
+    }
 
     // --- Ocorrências (Agenda) ---
 
-    /** Ocorrências de todas as missões entre {@code de} e {@code ate} (inclusive), por data e título. */
+    /** Ocorrências de todas as missões entre {@code de} e {@code ate} (inclusive), por data, principais primeiro e título. */
     public List<OcorrenciaMissao> ocorrencias(LocalDate de, LocalDate ate) {
         if (ate.isBefore(de)) throw new IllegalArgumentException("Período inválido: o fim é antes do início.");
         if (ChronoUnit.DAYS.between(de, ate) >= DIAS_MAXIMOS_CONSULTA)
@@ -73,6 +134,7 @@ public class Missoes {
                 if (m.ocorreEm(dia))
                     lista.add(new OcorrenciaMissao(m, dia, feitas.getOrDefault(m.id(), Set.of()).contains(dia)));
         lista.sort(Comparator.comparing(OcorrenciaMissao::data)
+                .thenComparing(o -> !o.missao().principal())   // principais primeiro em cada dia
                 .thenComparing(o -> o.missao().titulo(), String.CASE_INSENSITIVE_ORDER));
         return lista;
     }
@@ -85,10 +147,10 @@ public class Missoes {
         return ocorrencias(ontem.minusDays(dias - 1L), ontem).stream().filter(o -> !o.concluida()).toList();
     }
 
-    /** Missões sem prazo ainda não cumpridas. */
+    /** Objetivos (missões sem prazo que não são requisitos de outra) ainda não cumpridos. */
     public List<Missao> semPrazoEmAndamento() {
         return repo.listarTodas().stream()
-                .filter(m -> m.tipo() == TipoMissao.SEM_PRAZO && m.concluidaEm() == null).toList();
+                .filter(m -> m.tipo() == TipoMissao.SEM_PRAZO && !m.subMissao() && m.concluidaEm() == null).toList();
     }
 
     public Resumo resumo() {
@@ -108,21 +170,38 @@ public class Missoes {
             throw new IllegalArgumentException("A missão \"" + m.titulo() + "\" não acontece em " + Datas.formatar(dia) + ".");
         if (dia.isAfter(hoje()))
             throw new IllegalArgumentException("Não dá para concluir uma missão de um dia que ainda não chegou.");
+        exigirRequisitos(m);
         repo.marcarConcluida(missaoId, dia);
     }
 
     public void desfazerConclusao(int missaoId, LocalDate dia) { repo.desmarcarConcluida(missaoId, dia); }
 
-    /** Cumpre uma missão sem prazo (hoje). */
+    /** Cumpre uma missão sem prazo (hoje). Se ela tiver requisitos, todos precisam estar cumpridos. */
     public void concluirSemPrazo(int missaoId) {
         Missao m = semPrazo(missaoId);
         if (m.concluidaEm() != null) throw new IllegalArgumentException("Essa missão já foi concluída.");
+        exigirRequisitos(m);
         repo.definirConclusaoSemPrazo(missaoId, hoje());
     }
 
+    /** Reabre uma missão sem prazo. Um requisito não pode ser reaberto com a missão-mãe já concluída. */
     public void reabrirSemPrazo(int missaoId) {
-        semPrazo(missaoId);
+        Missao m = semPrazo(missaoId);
+        if (m.subMissao()) {
+            Optional<Missao> mae = repo.buscar(m.missaoPaiId());
+            if (mae.isPresent() && mae.get().concluidaEm() != null)
+                throw new IllegalArgumentException("\"" + mae.get().titulo() + "\" já foi concluída; reabra ela antes de reabrir os requisitos.");
+        }
         repo.definirConclusaoSemPrazo(missaoId, null);
+    }
+
+    /** A missão-mãe só é cumprida depois dos requisitos (sub-missões sem prazo). */
+    private void exigirRequisitos(Missao m) {
+        List<Missao> faltam = requisitosPendentes(m.id());
+        if (faltam.isEmpty()) return;
+        String nomes = faltam.stream().map(Missao::titulo).collect(java.util.stream.Collectors.joining(", "));
+        throw new IllegalArgumentException("Antes de concluir \"" + m.titulo() + "\", cumpra "
+                + (faltam.size() == 1 ? "o requisito: " : "os " + faltam.size() + " requisitos: ") + nomes + ".");
     }
 
     private Missao semPrazo(int missaoId) {

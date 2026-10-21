@@ -8,6 +8,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import model.CategoriaMissao;
 import model.Missao;
 import model.TipoMissao;
 import service.Missoes;
@@ -31,7 +32,12 @@ class AbaMissoes extends AbaCrud<Missao> {
     private final TextField tfTitulo = Ui.campo("Ex: Academia, Pagar a fatura, Aprender inglês");
     private final TextField tfDescricao = Ui.campo("Opcional");
     private final ComboBox<TipoMissao> cbTipo = new ComboBox<>();
+    private final ComboBox<CategoriaMissao> cbCategoria = new ComboBox<>();
+    /** Missão-mãe; o item nulo é "nenhuma" (missão independente). */
+    private final ComboBox<Missao> cbMae = new ComboBox<>();
     private final StackPane detalhesTipo = new StackPane();
+    /** Missão em edição (0 = nova), para saber quais mães podem ser escolhidas. */
+    private int idEmEdicao;
 
     // Diária
     private final DatePicker dpDia = Ui.seletorData(LocalDate.now());
@@ -61,11 +67,40 @@ class AbaMissoes extends AbaCrud<Missao> {
         spDiaMes.setPrefWidth(90);
         dpFim.setPromptText("Sem data final");
 
+        cbCategoria.getItems().setAll(CategoriaMissao.values());
+        cbCategoria.setValue(CategoriaMissao.SECUNDARIA);
+        cbCategoria.setTooltip(new Tooltip("Missões principais valem o dobro de XP"));
+        cbMae.setPromptText("Nenhuma (missão independente)");
+        cbMae.setConverter(new javafx.util.StringConverter<>() {
+            @Override public String toString(Missao m) { return m == null ? "Nenhuma (missão independente)" : m.titulo(); }
+            @Override public Missao fromString(String s) { return null; }
+        });
+        cbMae.setPrefWidth(260);
+        cbMae.valueProperty().addListener((obs, antes, mae) -> {
+            // a sub-missão acompanha a categoria da mãe
+            if (mae != null) cbCategoria.setValue(mae.categoria());
+            cbCategoria.setDisable(mae != null);
+        });
+
         form.addRow(0, Ui.label("Título:"), tfTitulo);
         form.addRow(1, Ui.label("Descrição:"), tfDescricao);
-        form.addRow(2, Ui.label("Tipo:"), cbTipo);
-        form.add(detalhesTipo, 0, 3, 3, 1);
+        form.addRow(2, Ui.label("Categoria:"), cbCategoria);
+        form.addRow(3, Ui.label("Sub-missão de:"), cbMae,
+                ajuda("Sub-missões sem prazo são requisitos: a missão-mãe só é concluída depois delas."));
+        form.addRow(4, Ui.label("Tipo:"), cbTipo);
+        form.add(detalhesTipo, 0, 5, 3, 1);
         mostrarDetalhes(TipoMissao.DIARIA);
+    }
+
+    @Override
+    protected void recarregarOpcoes() {
+        Missao atual = cbMae.getValue();
+        List<Missao> opcoes = new ArrayList<>();
+        opcoes.add(null);
+        opcoes.addAll(missoes.possiveisMaes(idEmEdicao));
+        cbMae.getItems().setAll(opcoes);
+        cbMae.setValue(atual == null ? null : opcoes.stream().filter(m -> m != null && m.id() == atual.id()).findFirst().orElse(null));
+        cbMae.setDisable(opcoes.size() == 1 && idEmEdicao != 0 && !missoes.subMissoes(idEmEdicao).isEmpty());
     }
 
     private void mostrarDetalhes(TipoMissao tipo) {
@@ -142,23 +177,49 @@ class AbaMissoes extends AbaCrud<Missao> {
 
     @Override
     protected void configurarColunas(TableView<Missao> t) {
-        t.getColumns().add(Ui.colunaTexto("Missão", Missao::titulo, 220));
-        t.getColumns().add(Ui.colunaTexto("Tipo", m -> m.tipo().nome(), 90));
-        t.getColumns().add(Ui.colunaTexto("Quando", Missao::quando, 200));
-        t.getColumns().add(Ui.colunaTexto("Próxima", this::proxima, 120));
-        t.getColumns().add(Ui.colunaTexto("Descrição", m -> m.descricao() == null ? "" : m.descricao(), 200));
+        t.getColumns().add(Ui.colunaTexto("Missão", AbaMissoes::tituloNaTabela, 240));
+        t.getColumns().add(Ui.colunaTexto("Categoria", m -> m.categoria().nome(), 90));
+        t.getColumns().add(Ui.colunaTexto("Tipo", m -> m.tipo().nome(), 80));
+        t.getColumns().add(Ui.colunaTexto("Quando", Missao::quando, 180));
+        t.getColumns().add(Ui.colunaTexto("Próxima / situação", this::proxima, 170));
+        t.getColumns().add(Ui.colunaTexto("Descrição", m -> m.descricao() == null ? "" : m.descricao(), 180));
+        t.setRowFactory(tv -> new TableRow<>() {
+            @Override protected void updateItem(Missao m, boolean vazio) {
+                super.updateItem(m, vazio);
+                getStyleClass().removeAll("linha-principal", "linha-secundaria", "linha-sub");
+                if (!vazio && m != null)
+                    getStyleClass().add(m.subMissao() ? "linha-sub" : m.principal() ? "linha-principal" : "linha-secundaria");
+            }
+        });
+    }
+
+    /** Principais com ★ e sub-missões recuadas com ↳, logo abaixo da mãe (ver {@link Missoes#listarEmOrdem()}). */
+    static String tituloNaTabela(Missao m) {
+        if (m.subMissao()) return "     ↳ " + m.titulo() + (m.requisito() ? "  (requisito)" : "");
+        return (m.principal() ? "★ " : "") + m.titulo();
     }
 
     private String proxima(Missao m) {
+        String requisitos = "";
+        if (!m.subMissao()) {
+            List<Missao> reqs = missoes.subMissoes(m.id()).stream().filter(Missao::requisito).toList();
+            long feitos = reqs.stream().filter(r -> r.concluidaEm() != null).count();
+            if (!reqs.isEmpty()) requisitos = " · " + feitos + "/" + reqs.size() + " requisitos";
+        }
         if (m.tipo() == TipoMissao.SEM_PRAZO)
-            return m.concluidaEm() != null ? "✔ concluída em " + Ui.DATA_BR.format(m.concluidaEm()) : "em andamento";
-        return m.proximaOcorrencia(missoes.hoje()).map(Ui::diaCurto).orElse("—");
+            return (m.concluidaEm() != null ? "✔ concluída em " + Ui.DATA_BR.format(m.concluidaEm()) : "em andamento") + requisitos;
+        return m.proximaOcorrencia(missoes.hoje()).map(Ui::diaCurto).orElse("—") + requisitos;
     }
 
-    @Override protected List<Missao> carregar() { return missoes.listar(); }
+    @Override protected List<Missao> carregar() { return missoes.listarEmOrdem(); }
 
     @Override
     protected void preencherFormulario(Missao m) {
+        idEmEdicao = m.id();
+        recarregarOpcoes();
+        cbMae.setValue(m.missaoPaiId() == null ? null : cbMae.getItems().stream()
+                .filter(x -> x != null && x.id() == m.missaoPaiId()).findFirst().orElse(null));
+        cbCategoria.setValue(m.categoria());
         tfTitulo.setText(m.titulo());
         tfDescricao.setText(m.descricao() == null ? "" : m.descricao());
         cbTipo.setValue(m.tipo());
@@ -174,6 +235,10 @@ class AbaMissoes extends AbaCrud<Missao> {
 
     @Override
     protected void limparFormulario() {
+        idEmEdicao = 0;
+        recarregarOpcoes();
+        cbMae.setValue(null);
+        cbCategoria.setValue(CategoriaMissao.SECUNDARIA);
         tfTitulo.clear();
         tfDescricao.clear();
         cbTipo.setValue(TipoMissao.DIARIA);
@@ -205,13 +270,26 @@ class AbaMissoes extends AbaCrud<Missao> {
             case MENSAL -> Missao.mensal(titulo, descricao, spDiaMes.getValue(), dpInicio.getValue(), dpFim.getValue());
             case SEM_PRAZO -> Missao.semPrazo(titulo, descricao);
         };
-        return m.comId(id);
+        Missao mae = cbMae.getValue();
+        return m.comId(id).comCategoria(cbCategoria.getValue()).comMissaoPai(mae == null ? null : mae.id());
     }
 
     @Override protected void salvarNovo() { missoes.criar(lerFormulario(0)); aoMudar.run(); }
     @Override protected void salvarAlteracao(Missao original) { missoes.atualizar(lerFormulario(original.id())); aoMudar.run(); }
-    @Override protected void excluir(Missao m) { missoes.excluir(m.id()); aoMudar.run(); }
-    @Override protected String descrever(Missao m) { return "a missão \"" + m.titulo() + "\""; }
+
+    /** Excluir a mãe já exclui as sub-missões; se elas também estavam selecionadas, não há mais o que excluir. */
+    @Override
+    protected void excluir(Missao m) {
+        if (missoes.buscar(m.id()).isEmpty()) return;
+        missoes.excluir(m.id());
+        aoMudar.run();
+    }
+
+    @Override
+    protected String descrever(Missao m) {
+        int subs = m.subMissao() ? 0 : missoes.subMissoes(m.id()).size();
+        return "a missão \"" + m.titulo() + "\"" + (subs == 0 ? "" : subs == 1 ? " e a sub-missão dela" : " e as " + subs + " sub-missões dela");
+    }
     @Override protected String descreverVarios(List<Missao> itens) { return "as " + itens.size() + " missões selecionadas"; }
 
     /** Botão para concluir (ou reabrir) a missão sem prazo selecionada. */
@@ -220,7 +298,8 @@ class AbaMissoes extends AbaCrud<Missao> {
         Button concluir = new Button("Concluir / reabrir objetivo");
         concluir.getStyleClass().add("btn-primary");
         concluir.setTooltip(new Tooltip("Missões sem prazo: marca como cumprida (+"
-                + service.CalculadoraXp.XP_MISSAO_SEM_PRAZO + " XP) ou reabre"));
+                + service.CalculadoraXp.XP_MISSAO_SEM_PRAZO + " XP, o dobro se for principal) ou reabre. "
+                + "Se tiver requisitos, eles precisam estar cumpridos."));
         concluir.setOnAction(e -> alternarObjetivo());
         return List.of(concluir);
     }

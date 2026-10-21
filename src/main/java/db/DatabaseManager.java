@@ -33,7 +33,7 @@ public class DatabaseManager {
     private static final Object TRAVA_ARQUIVO = new Object();
 
     /** Versão do esquema gravada em PRAGMA user_version. Suba ao criar uma nova migração. */
-    static final int VERSAO_ESQUEMA = 4;
+    static final int VERSAO_ESQUEMA = 5;
 
     /** Permite injetar URL customizada (ex: :memory: para testes). */
     public static void setUrl(String url) { customUrl = url; }
@@ -232,7 +232,9 @@ public class DatabaseManager {
                     data_inicio  TEXT,
                     data_fim     TEXT,
                     concluida_em TEXT,
-                    criada_em    TEXT
+                    criada_em    TEXT,
+                    categoria    TEXT    NOT NULL DEFAULT 'SECUNDARIA',
+                    missao_pai_id INTEGER REFERENCES missoes(id)
                 )
             """);
             // dias escolhidos das missões diárias
@@ -267,6 +269,7 @@ public class DatabaseManager {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_despesas_data ON despesas(data)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_investimentos_data ON investimentos(data)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_missoes_usuario ON missoes(usuario_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_missoes_pai ON missoes(missao_pai_id)");
 
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao inicializar banco: " + e.getMessage(), e);
@@ -294,7 +297,8 @@ public class DatabaseManager {
                 || temColuna(conn, "investimentos", "mes") || temColuna(conn, "usuarios", "xp"));
         boolean alteraV2 = versao < 2 && !temColuna(conn, "contas", "saldo_inicial");
         boolean alteraV3 = versao < 3 && !temColuna(conn, "contas", "usuario_id");
-        if (alteraV1 || alteraV2 || alteraV3) fazerBackup(versao);
+        boolean alteraV5 = versao < 5 && !temColuna(conn, "missoes", "categoria");
+        if (alteraV1 || alteraV2 || alteraV3 || alteraV5) fazerBackup(versao);
 
         // Recriar tabelas referenciadas por outras (contas, categorias) exige desligar a checagem de
         // chaves estrangeiras durante a troca; ela é refeita com PRAGMA foreign_key_check antes do commit.
@@ -316,6 +320,11 @@ public class DatabaseManager {
             }
             if (alteraV3) migrarParaV3(stmt, conn);
             // v4 (missões): só tabelas novas, já criadas em inicializar(); não há dados a converter.
+            if (alteraV5) {
+                // v5: missões principais/secundárias e sub-missões; as missões existentes viram secundárias.
+                stmt.execute("ALTER TABLE missoes ADD COLUMN categoria TEXT NOT NULL DEFAULT 'SECUNDARIA'");
+                stmt.execute("ALTER TABLE missoes ADD COLUMN missao_pai_id INTEGER REFERENCES missoes(id)");
+            }
 
             try (ResultSet rs = stmt.executeQuery("PRAGMA foreign_key_check")) {
                 if (rs.next())

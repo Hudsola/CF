@@ -174,6 +174,43 @@ class MigracaoTest {
     }
 
     @Test
+    void deveMigrarDaVersao4ParaAVersao5ComMissoesExistentesComoSecundarias() throws Exception {
+        Path arquivo = dir.resolve("mycareer.db");
+        DatabaseManager.setUrl("jdbc:sqlite:" + arquivo);
+        DatabaseManager.inicializar();
+        int usuario = new UsuarioRepository().criar("Ana", "ana", "ana@x.com", null, "hash", null);
+        // volta a tabela de missões para a estrutura da v4 (sem categoria nem missão-mãe)
+        try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + arquivo);
+             Statement s = c.createStatement()) {
+            s.execute("DROP INDEX idx_missoes_pai");
+            s.execute("DROP TABLE missoes");
+            s.execute("CREATE TABLE missoes (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER NOT NULL REFERENCES usuarios(id), "
+                    + "titulo TEXT NOT NULL, descricao TEXT, tipo TEXT NOT NULL, dias_semana TEXT, dia_mes INTEGER, "
+                    + "data_inicio TEXT, data_fim TEXT, concluida_em TEXT, criada_em TEXT)");
+            s.execute("INSERT INTO missoes (id, usuario_id, titulo, tipo, dia_mes, data_inicio) "
+                    + "VALUES (7, " + usuario + ", 'Pagar a fatura', 'MENSAL', 5, '2026-01-01')");
+            s.execute("INSERT INTO missao_conclusoes (missao_id, data) VALUES (7, '2026-10-05')");
+            s.execute("PRAGMA user_version = 4");
+        }
+
+        DatabaseManager.inicializar();
+
+        var missao = new repository.MissaoRepository(usuario).buscar(7).orElseThrow();
+        assertEquals("Pagar a fatura", missao.titulo());
+        assertEquals(model.CategoriaMissao.SECUNDARIA, missao.categoria());
+        assertNull(missao.missaoPaiId());
+        assertEquals(1, new repository.MissaoRepository(usuario).totalConclusoes().get(model.CategoriaMissao.SECUNDARIA),
+                "a conclusão antiga continua valendo XP");
+        try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + arquivo);
+             ResultSet rs = c.createStatement().executeQuery("PRAGMA user_version")) {
+            assertEquals(DatabaseManager.VERSAO_ESQUEMA, rs.getInt(1));
+        }
+        try (Stream<Path> arquivos = Files.list(dir)) {
+            assertEquals(1, arquivos.filter(p -> p.getFileName().toString().startsWith("mycareer-backup-v4-")).count());
+        }
+    }
+
+    @Test
     void bancoNovoJaNasceNaVersaoAtual() throws Exception {
         Path arquivo = dir.resolve("novo.db");
         DatabaseManager.setUrl("jdbc:sqlite:" + arquivo);

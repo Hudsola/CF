@@ -14,16 +14,29 @@ import java.util.stream.Collectors;
  *   <li>MENSAL: {@code diaMes} (1 a 31), {@code inicio} e, opcionalmente, {@code fim};</li>
  *   <li>SEM_PRAZO: nenhum; {@code concluidaEm} diz quando foi cumprida.</li>
  * </ul>
- * Use as fábricas ({@link #diaria}, {@link #semanal}, {@link #mensal}, {@link #semPrazo}); a validação fica
+ * Use as fábricas ({@link #diaria}, {@link #semanal}, {@link #mensal}, {@link #semPrazo}), que criam missões
+ * secundárias e sem missão-mãe, e ajuste com {@link #comCategoria} e {@link #comMissaoPai}. A validação fica
  * em {@code service.Missoes}.
+ *
+ * @param missaoPaiId missão-mãe, se esta for uma sub-missão (um nível só). Sub-missões sem prazo são os
+ *                    requisitos da mãe: ela só pode ser concluída depois deles.
  */
 public record Missao(int id, String titulo, String descricao, TipoMissao tipo,
                      SortedSet<LocalDate> datas, Set<DayOfWeek> diasSemana, Integer diaMes,
-                     LocalDate inicio, LocalDate fim, LocalDate concluidaEm) {
+                     LocalDate inicio, LocalDate fim, LocalDate concluidaEm,
+                     CategoriaMissao categoria, Integer missaoPaiId) {
 
     private static final Locale PT = Locale.forLanguageTag("pt-BR");
 
+    /** Construtor sem categoria nem missão-mãe (missão secundária independente). */
+    public Missao(int id, String titulo, String descricao, TipoMissao tipo,
+                  SortedSet<LocalDate> datas, Set<DayOfWeek> diasSemana, Integer diaMes,
+                  LocalDate inicio, LocalDate fim, LocalDate concluidaEm) {
+        this(id, titulo, descricao, tipo, datas, diasSemana, diaMes, inicio, fim, concluidaEm, null, null);
+    }
+
     public Missao {
+        categoria = categoria == null ? CategoriaMissao.SECUNDARIA : categoria;
         titulo = titulo == null ? "" : titulo.trim();
         descricao = descricao == null || descricao.isBlank() ? null : descricao.trim();
         datas = Collections.unmodifiableSortedSet(new TreeSet<>(datas == null ? Set.of() : datas));
@@ -49,12 +62,29 @@ public record Missao(int id, String titulo, String descricao, TipoMissao tipo,
     }
 
     public Missao comId(int novoId) {
-        return new Missao(novoId, titulo, descricao, tipo, datas, diasSemana, diaMes, inicio, fim, concluidaEm);
+        return new Missao(novoId, titulo, descricao, tipo, datas, diasSemana, diaMes, inicio, fim, concluidaEm,
+                categoria, missaoPaiId);
     }
 
     public Missao comConclusao(LocalDate data) {
-        return new Missao(id, titulo, descricao, tipo, datas, diasSemana, diaMes, inicio, fim, data);
+        return new Missao(id, titulo, descricao, tipo, datas, diasSemana, diaMes, inicio, fim, data, categoria, missaoPaiId);
     }
+
+    public Missao comCategoria(CategoriaMissao nova) {
+        return new Missao(id, titulo, descricao, tipo, datas, diasSemana, diaMes, inicio, fim, concluidaEm, nova, missaoPaiId);
+    }
+
+    /** Liga a missão a uma missão-mãe (nulo = missão independente). */
+    public Missao comMissaoPai(Integer paiId) {
+        return new Missao(id, titulo, descricao, tipo, datas, diasSemana, diaMes, inicio, fim, concluidaEm, categoria, paiId);
+    }
+
+    public boolean principal() { return categoria == CategoriaMissao.PRINCIPAL; }
+
+    public boolean subMissao() { return missaoPaiId != null; }
+
+    /** Sub-missão sem prazo: um requisito que a mãe precisa antes de ser concluída. */
+    public boolean requisito() { return subMissao() && tipo == TipoMissao.SEM_PRAZO; }
 
     /** true se a missão deve ser cumprida nesse dia (missões sem prazo não têm dia). */
     public boolean ocorreEm(LocalDate dia) {

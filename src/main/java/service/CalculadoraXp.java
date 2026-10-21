@@ -15,8 +15,9 @@ import java.util.*;
  *  - +{@value #XP_POR_LANCAMENTO} XP por lançamento registrado (receita, despesa ou investimento);
  *  - +{@value #XP_MES_POSITIVO} XP por mês já encerrado que fechou com saldo positivo;
  *  - +{@value #XP_MES_COM_INVESTIMENTO} XP por mês com pelo menos um investimento;
- *  - +{@value #XP_POR_MISSAO} XP por dia cumprido de uma missão diária, semanal ou mensal;
- *  - +{@value #XP_MISSAO_SEM_PRAZO} XP por missão sem prazo cumprida.
+ *  - +{@value #XP_POR_MISSAO} XP por dia cumprido de uma missão secundária diária, semanal ou mensal;
+ *  - +{@value #XP_MISSAO_SEM_PRAZO} XP por missão secundária sem prazo cumprida;
+ *  - missões principais valem o dobro (ver {@link CategoriaMissao#multiplicadorXp()}).
  * Para sair do nível N para o N+1 são necessários N × {@value #XP_BASE_NIVEL} XP.
  */
 public final class CalculadoraXp {
@@ -30,19 +31,35 @@ public final class CalculadoraXp {
 
     private CalculadoraXp() {}
 
+    /** XP de um dia cumprido de uma missão dessa categoria. */
+    public static int xpPorDia(CategoriaMissao c) { return XP_POR_MISSAO * c.multiplicadorXp(); }
+
+    /** XP de uma missão sem prazo cumprida dessa categoria. */
+    public static int xpPorObjetivo(CategoriaMissao c) { return XP_MISSAO_SEM_PRAZO * c.multiplicadorXp(); }
+
+    /**
+     * XP das missões cumpridas.
+     *
+     * @param diasCumpridos        ocorrências cumpridas de missões diárias, semanais e mensais, por categoria
+     * @param objetivosCumpridos   missões sem prazo cumpridas, por categoria
+     */
+    public static int xpDeMissoes(Map<CategoriaMissao, Integer> diasCumpridos, Map<CategoriaMissao, Integer> objetivosCumpridos) {
+        int xp = 0;
+        for (CategoriaMissao c : CategoriaMissao.values())
+            xp += diasCumpridos.getOrDefault(c, 0) * xpPorDia(c) + objetivosCumpridos.getOrDefault(c, 0) * xpPorObjetivo(c);
+        return xp;
+    }
+
     /** XP só dos lançamentos financeiros. */
     public static Progresso calcular(List<Receita> receitas, List<Despesa> despesas,
                                      List<Investimento> investimentos, LocalDate hoje) {
-        return calcular(receitas, despesas, investimentos, 0, 0, hoje);
+        return calcular(receitas, despesas, investimentos, 0, hoje);
     }
 
-    /**
-     * @param diasDeMissaoCumpridos    ocorrências cumpridas de missões diárias, semanais e mensais
-     * @param missoesSemPrazoCumpridas missões sem prazo cumpridas
-     */
+    /** @param xpDeMissoes XP das missões cumpridas (ver {@link #xpDeMissoes}) */
     public static Progresso calcular(List<Receita> receitas, List<Despesa> despesas, List<Investimento> investimentos,
-                                     int diasDeMissaoCumpridos, int missoesSemPrazoCumpridas, LocalDate hoje) {
-        int xp = diasDeMissaoCumpridos * XP_POR_MISSAO + missoesSemPrazoCumpridas * XP_MISSAO_SEM_PRAZO;
+                                     int xpDeMissoes, LocalDate hoje) {
+        int xp = xpDeMissoes;
         xp += (receitas.size() + despesas.size() + investimentos.size()) * XP_POR_LANCAMENTO;
 
         Map<YearMonth, BigDecimal> saldoPorMes = new HashMap<>();

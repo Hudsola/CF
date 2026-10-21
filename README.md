@@ -16,6 +16,9 @@ O app é organizado em abas na barra superior: **Home**, **Missões**, **Finanç
   - **Mensal**: um dia do mês (ex: pagar a fatura todo dia 5); se o mês não tiver o dia (31 em fevereiro), vale o último dia
   - **Sem prazo**: objetivos sem data (ex: juntar R$ 10 mil, comprar uma moto, aprender inglês), concluídos uma única vez
   - listas de **hoje** e das **atrasadas** (últimos 7 dias) com caixa de marcar: marcar conclui o dia e rende XP; desmarcar desfaz. Dias futuros não podem ser marcados
+  - **Principal ou secundária**, como as quests dos jogos: a principal aparece em destaque (★, dourada) e vale o **dobro de XP**
+  - **Sub-missões**: uma missão pode ter sub-missões (um nível só), que são missões completas e herdam a categoria da mãe. As sub-missões **sem prazo são requisitos**: a missão-mãe só pode ser concluída depois deles (ex: *Miojo* requer *água*, *fogo* e *macarrão*). Sub-missões recorrentes são hábitos que ajudam e não bloqueiam (ex: *Aprender inglês* com *Estudar inglês* seg/qua/sex). Excluir a mãe exclui as sub-missões
+  - painel de **objetivos e requisitos**: cada objetivo com o progresso (ex: 2/3 requisitos) e caixas de marcar; a da mãe só é liberada depois dos requisitos
 - **Agenda**: calendário do mês com as missões de cada dia (pendentes em dourado, feitas em verde, atrasadas em vermelho); clicar num dia mostra a lista dele, onde também dá para marcar como feita
 - **Estoque**: em breve
 - **Finanças**, com três sub-abas:
@@ -46,8 +49,8 @@ O XP é recalculado a partir dos seus lançamentos e das missões cumpridas semp
 | Cada receita, despesa ou investimento registrado  | +10  |
 | Cada mês já encerrado que fechou com saldo positivo | +50 |
 | Cada mês com pelo menos um investimento           | +30  |
-| Cada dia cumprido de uma missão diária, semanal ou mensal | +20 |
-| Cada missão sem prazo cumprida                    | +100 |
+| Cada dia cumprido de uma missão diária, semanal ou mensal | +20 (principal: +40) |
+| Cada missão sem prazo cumprida (inclusive requisitos) | +100 (principal: +200) |
 
 Para passar do nível N para o N+1 são necessários N × 100 XP (100 para o nível 2, mais 200 para o 3, e assim por diante). As regras ficam em `service/CalculadoraXp.java`.
 
@@ -99,7 +102,7 @@ src/main/java/
 └── ui/           App, Launcher, SmokeTest e telas JavaFX (um pacote por aba)
     ├── login/       tela de login/cadastro e fluxo do Google
     ├── home/        Home: painel do usuário (PainelUsuario), cards das abas, XP, perfil e foto
-    ├── missoes/     MissoesView, cadastro (AbaMissoes) e ListaMissoes (marcar como feita)
+    ├── missoes/     MissoesView, cadastro (AbaMissoes), ListaMissoes (marcar como feita) e PainelObjetivos (requisitos)
     ├── agenda/      AgendaView: calendário do mês e lista do dia
     ├── estoque/     aba ainda "em breve"
     ├── financas/    FinancasView (sub-abas) e VisaoGeralView
@@ -177,7 +180,7 @@ O arquivo contém seus dados pessoais e **não é versionado** (está no `.gitig
 | `aplicacoes_fixos`      | Em quais meses cada fixo já foi aplicado           |
 | `mapeamentos_descricao` | Regras aprendidas na importação de CSV             |
 | `usuarios`              | Usuários: nome, usuário, e-mail, nascimento, hash da senha, id Google |
-| `missoes`               | Missões: título, tipo, dias da semana ou do mês, período e conclusão (sem prazo) |
+| `missoes`               | Missões: título, categoria, missão-mãe, tipo, dias da semana ou do mês, período e conclusão (sem prazo) |
 | `missao_datas`          | Dias escolhidos das missões diárias                |
 | `missao_conclusoes`     | Dias em que cada missão foi cumprida               |
 

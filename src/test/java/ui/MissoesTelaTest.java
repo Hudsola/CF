@@ -2,6 +2,7 @@ package ui;
 
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import model.CategoriaMissao;
 import model.Missao;
 import model.TipoMissao;
 import model.Usuario;
@@ -132,7 +133,7 @@ class MissoesTelaTest extends TelaTestBase {
         preencher(PROMPT_TITULO, "Aprender inglês");
         escolherTipo(TipoMissao.SEM_PRAZO);
         clicar("Salvar Missão");
-        assertTrue(temTexto("• Aprender inglês"), "lista de objetivos em andamento");
+        assertNotNull(caixaDaMissao("Aprender inglês"), "aparece nos objetivos com caixa de marcar");
 
         int xpAntes = xp();
         selecionarNaTabela("Aprender inglês");
@@ -178,8 +179,103 @@ class MissoesTelaTest extends TelaTestBase {
         assertNotNull(caixaDaMissao("Levar o carro na revisão"), "a lista de hoje é atualizada");
     }
 
+    // --- Principais, secundárias e sub-missões ---
+
+    @Test
+    void cadastrarMissaoPrincipalApareceComEstrelaNaTabela() {
+        preencher(PROMPT_TITULO, "Conseguir a vaga");
+        escolherTipo(TipoMissao.SEM_PRAZO);
+        escolherCategoria(CategoriaMissao.PRINCIPAL);
+        clicar("Salvar Missão");
+
+        assertEquals(CategoriaMissao.PRINCIPAL, buscar("Conseguir a vaga").categoria());
+        assertTrue(temTexto("★ Conseguir a vaga"), "coluna Missão da tabela");
+    }
+
+    @Test
+    void cadastrarSubMissaoHerdaACategoriaEApareceAbaixoDaMae() {
+        Missao miojo = missoes.criar(Missao.semPrazo("Miojo", null).comCategoria(CategoriaMissao.PRINCIPAL));
+        interact(() -> App.navegarPara("missoes"));
+        preencher(PROMPT_TITULO, "Água");
+        escolherTipo(TipoMissao.SEM_PRAZO);
+        escolherMae("Miojo");
+        ComboBox<?> categoria = comboDeCategoria();
+        assertTrue(categoria.isDisabled(), "a categoria vem da mãe");
+        assertEquals(CategoriaMissao.PRINCIPAL, categoria.getValue());
+        clicar("Salvar Missão");
+
+        Missao agua = buscar("Água");
+        assertEquals(miojo.id(), agua.missaoPaiId());
+        assertEquals(CategoriaMissao.PRINCIPAL, agua.categoria());
+        @SuppressWarnings("unchecked")
+        TableView<Missao> t = (TableView<Missao>) exigir(n -> n instanceof TableView<?>, "tabela");
+        List<String> ordem = t.getItems().stream().map(Missao::titulo).toList();
+        assertEquals(ordem.indexOf("Miojo") + 1, ordem.indexOf("Água"), "sub-missão logo abaixo da mãe");
+        assertTrue(temTextoComecandoCom("     ↳ Água"));
+    }
+
+    @Test
+    void requisitosLiberamAConclusaoDaMissaoMaeNoPainel() {
+        Missao miojo = missoes.criar(Missao.semPrazo("Miojo", null).comCategoria(CategoriaMissao.PRINCIPAL));
+        missoes.criar(Missao.semPrazo("Água", null).comMissaoPai(miojo.id()));
+        missoes.criar(Missao.semPrazo("Fogo", null).comMissaoPai(miojo.id()));
+        interact(() -> App.navegarPara("missoes"));
+        int xpAntes = xp();
+
+        assertTrue(caixaDaMissao("Miojo").isDisabled(), "faltam os requisitos");
+        assertTrue(temTexto("Principal · 0/2 requisitos"));
+        clickOn(caixaDaMissao("Água"));
+        clickOn(caixaDaMissao("Fogo"));
+        assertTrue(temTexto("Principal · 2/2 requisitos"));
+        assertFalse(caixaDaMissao("Miojo").isDisabled());
+
+        clickOn(caixaDaMissao("Miojo"));
+        assertNotNull(buscar("Miojo").concluidaEm());
+        assertEquals(xpAntes + 3 * CalculadoraXp.xpPorObjetivo(CategoriaMissao.PRINCIPAL), xp(), "requisitos herdam a categoria principal");
+        assertTrue(temTexto("Nenhum objetivo em andamento."));
+    }
+
+    @Test
+    void concluirDiaDeMissaoComRequisitoPendenteMostraOMotivo() {
+        Missao treino = missoes.criar(Missao.diaria("Treino", null, List.of(hoje)));
+        missoes.criar(Missao.semPrazo("Comprar tênis", null).comMissaoPai(treino.id()));
+        interact(() -> App.navegarPara("missoes"));
+
+        CheckBox caixa = caixaNaListaDeHoje("Treino");
+        clickOn(caixa);
+        assertFalse(caixa.isSelected(), "volta a ficar desmarcada");
+        assertTrue(temTexto("Antes de concluir \"Treino\", cumpra o requisito: Comprar tênis."));
+        assertFalse(missoes.doDia(hoje).stream().anyMatch(o -> o.concluida()));
+    }
+
     // --- auxiliares ---
 
+
+    private ComboBox<?> comboDeCategoria() {
+        return (ComboBox<?>) exigir(n -> n instanceof ComboBox<?> c && c.getValue() instanceof CategoriaMissao, "categoria");
+    }
+
+    private void escolherCategoria(CategoriaMissao categoria) {
+        @SuppressWarnings("unchecked")
+        ComboBox<CategoriaMissao> combo = (ComboBox<CategoriaMissao>) comboDeCategoria();
+        interact(() -> combo.setValue(categoria));
+    }
+
+    private void escolherMae(String titulo) {
+        @SuppressWarnings("unchecked")
+        ComboBox<Missao> combo = (ComboBox<Missao>) exigir(n -> n instanceof ComboBox<?> c
+                && "Nenhuma (missão independente)".equals(c.getPromptText()), "sub-missão de");
+        interact(() -> combo.setValue(combo.getItems().stream()
+                .filter(m -> m != null && m.titulo().equals(titulo)).findFirst().orElseThrow()));
+    }
+
+    /** Caixa da missão na lista "Hoje" (a mesma missão pode aparecer também no painel de objetivos). */
+    private CheckBox caixaNaListaDeHoje(String titulo) {
+        Node rotulo = exigir(n -> n instanceof Label l && titulo.equals(l.getText()) && l.getStyleClass().contains("missao-titulo")
+                && n.getParent() != null && n.getParent().getParent() != null
+                && n.getParent().getParent().getParent() instanceof ui.missoes.ListaMissoes, titulo + " em Hoje");
+        return (CheckBox) rotulo.getParent().getParent().lookup(".check-box");
+    }
     private int xp() {
         return new ControleFinanceiro(usuario.getId()).getProgresso().xpTotal();
     }
