@@ -214,18 +214,6 @@
     -fx-font-weight: bold;
 }
 
-/* abas ainda sem funcionalidades */
-.selo-em-breve {
-    -fx-background-color: #2a2412;
-    -fx-border-color: #E8A838;
-    -fx-border-width: 1;
-    -fx-border-radius: 3;
-    -fx-background-radius: 3;
-    -fx-text-fill: #E8A838;
-    -fx-font-size: 10px;
-    -fx-font-weight: bold;
-    -fx-padding: 3 8 3 8;
-}
 
 /* --- Missões --- */
 .missao-item {

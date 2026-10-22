@@ -62,14 +62,13 @@ class NavegacaoAbasTest extends TelaTestBase {
     }
 
     @Test
-    void soEstoqueAindaEstaEmBreve() {
-        clicar("ESTOQUE");
-        assertTrue(temTexto("Estoque"));
-        assertTrue(temTexto("EM BREVE"));
-        for (String aba : new String[]{"MISSÕES", "AGENDA"}) {
+    void nenhumaAbaEstaMaisEmBreve() {
+        assertFalse(temTexto("EM BREVE"), "Home");
+        for (String aba : new String[]{"MISSÕES", "FINANÇAS", "AGENDA", "ESTOQUE"}) {
             clicar(aba);
             assertFalse(temTexto("EM BREVE"), aba + " já tem funcionalidades");
         }
+        assertTrue(temTexto("Estoque da casa"));
     }
 
     @Test

@@ -33,7 +33,7 @@ public class DatabaseManager {
     private static final Object TRAVA_ARQUIVO = new Object();
 
     /** Versão do esquema gravada em PRAGMA user_version. Suba ao criar uma nova migração. */
-    static final int VERSAO_ESQUEMA = 5;
+    static final int VERSAO_ESQUEMA = 6;
 
     /** Permite injetar URL customizada (ex: :memory: para testes). */
     public static void setUrl(String url) { customUrl = url; }
@@ -255,6 +255,19 @@ public class DatabaseManager {
                 )
             """);
 
+            // Estoque (v6): produtos da casa; a quantidade é texto decimal exato (ex: "1.028").
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS produtos (
+                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+                    codigo     TEXT    NOT NULL COLLATE NOCASE,
+                    descricao  TEXT    NOT NULL,
+                    quantidade TEXT    NOT NULL DEFAULT '0',
+                    unidade    TEXT    NOT NULL,
+                    UNIQUE(usuario_id, codigo)
+                )
+            """);
+
             migrar(conn);
 
             // Login: usuário, e-mail e conta Google não podem se repetir (vários NULL são permitidos).
@@ -319,7 +332,7 @@ public class DatabaseManager {
                 stmt.execute("ALTER TABLE contas ADD COLUMN saldo_inicial REAL NOT NULL DEFAULT 0");
             }
             if (alteraV3) migrarParaV3(stmt, conn);
-            // v4 (missões): só tabelas novas, já criadas em inicializar(); não há dados a converter.
+            // v4 (missões) e v6 (estoque): só tabelas novas, já criadas em inicializar(); não há dados a converter.
             if (alteraV5) {
                 // v5: missões principais/secundárias e sub-missões; as missões existentes viram secundárias.
                 stmt.execute("ALTER TABLE missoes ADD COLUMN categoria TEXT NOT NULL DEFAULT 'SECUNDARIA'");

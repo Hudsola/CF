@@ -20,7 +20,7 @@ O app é organizado em abas na barra superior: **Home**, **Missões**, **Finanç
   - **Sub-missões**: uma missão pode ter sub-missões (um nível só), que são missões completas e herdam a categoria da mãe. As sub-missões **sem prazo são requisitos**: a missão-mãe só pode ser concluída depois deles (ex: *Miojo* requer *água*, *fogo* e *macarrão*). Sub-missões recorrentes são hábitos que ajudam e não bloqueiam (ex: *Aprender inglês* com *Estudar inglês* seg/qua/sex). Excluir a mãe exclui as sub-missões
   - painel de **objetivos e requisitos**: cada objetivo com o progresso (ex: 2/3 requisitos) e caixas de marcar; a da mãe só é liberada depois dos requisitos
 - **Agenda**: calendário do mês com as missões de cada dia (pendentes em dourado, feitas em verde, atrasadas em vermelho); clicar num dia mostra a lista dele, onde também dá para marcar como feita
-- **Estoque**: em breve
+- **Estoque**: produtos da casa com **código do MyCareer** (automático P0001, P0002… ou um seu, ex: CARNE-CONTRAFILE: o mesmo produto de lojas diferentes fica com um código só), descrição, **quantidade** e **unidade** (un, caixa, pacote, kg, g, L, ml; peso e volume aceitam frações como 1,028 kg). Busca por código ou descrição, **entrada** (compra) e **saída** (consumo) do produto selecionado sem deixar o estoque negativo, e destaque para o que acabou
 - **Finanças**, com três sub-abas:
   - **Visão geral**: receitas/despesas/saldo do mês atual, **saldo por conta**, gráficos do mês e lançamentos fixos ativos
   - **Cadastros**: todas as abas têm cadastro, **edição** (botão Editar ou duplo clique na linha) e exclusão com confirmação — inclusive de **várias linhas de uma vez** (Ctrl+clique, Shift+clique ou Ctrl+A, e o botão Excluir ou a tecla Delete)
@@ -98,17 +98,17 @@ src/main/java/
 ├── db/           DatabaseManager — conexão, criação das tabelas e migrações de esquema
 ├── model/        entidades (Receita, Despesa, …) e tipos de apoio (Dinheiro, Periodo, Meses, Progresso)
 ├── repository/   acesso ao banco (SQL)
-├── service/      ControleFinanceiro (fachada financeira por usuário), Missoes, Autenticacao, Senhas, GoogleOAuth, ImportacaoCsv, CalculadoraXp, Conversor
+├── service/      ControleFinanceiro (fachada financeira por usuário), Missoes, Estoque, Autenticacao, Senhas, GoogleOAuth, ImportacaoCsv, CalculadoraXp, Conversor
 └── ui/           App, Launcher, SmokeTest e telas JavaFX (um pacote por aba)
     ├── login/       tela de login/cadastro e fluxo do Google
     ├── home/        Home: painel do usuário (PainelUsuario), cards das abas, XP, perfil e foto
     ├── missoes/     MissoesView, cadastro (AbaMissoes), ListaMissoes (marcar como feita) e PainelObjetivos (requisitos)
     ├── agenda/      AgendaView: calendário do mês e lista do dia
-    ├── estoque/     aba ainda "em breve"
+    ├── estoque/     EstoqueView e AbaProdutos (cadastro, busca, entrada e saída)
     ├── financas/    FinancasView (sub-abas) e VisaoGeralView
     │   ├── cadastros/   uma classe por aba (AbaReceitas, AbaDespesas, …) sobre a base comum AbaCrud
     │   └── resumo/      ResumoView
-    └── components/  NavBar (abas do app), AbaCrud (base dos cadastros), DonutChart, EmBreve e Ui
+    └── components/  NavBar (abas do app), AbaCrud (base dos cadastros), DonutChart e Ui
 src/main/resources/   css/dark-theme.css, fonts/ (Pricedown), icons/ (ícone da janela)
 src/test/java/    testes de migração, repositórios, serviços e telas (TestFX; banco temporário por teste)
 ```
@@ -183,6 +183,7 @@ O arquivo contém seus dados pessoais e **não é versionado** (está no `.gitig
 | `missoes`               | Missões: título, categoria, missão-mãe, tipo, dias da semana ou do mês, período e conclusão (sem prazo) |
 | `missao_datas`          | Dias escolhidos das missões diárias                |
 | `missao_conclusoes`     | Dias em que cada missão foi cumprida               |
+| `produtos`              | Estoque: código, descrição, quantidade (decimal exato) e unidade |
 
 As chaves estrangeiras são verificadas (`foreign_keys` ligado), então não é possível gravar lançamentos com conta ou categoria inexistente. Valores ficam em colunas `REAL` com 2 casas decimais e datas em texto `aaaa-mm-dd`; o mês e o ano de cada lançamento são derivados da data.
 

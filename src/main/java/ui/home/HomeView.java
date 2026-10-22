@@ -7,6 +7,7 @@ import javafx.scene.layout.*;
 import model.*;
 import service.CalculadoraXp;
 import service.ControleFinanceiro;
+import service.Estoque;
 import service.Missoes;
 import ui.App;
 import ui.components.Ui;
@@ -16,7 +17,6 @@ import java.util.List;
 
 /**
  * Home: painel do usuário, um card de resumo por aba (com botão para abri-la) e o nível/XP.
- * Estoque aparece como "em breve" até ganhar funcionalidades.
  */
 public class HomeView {
 
@@ -30,7 +30,7 @@ public class HomeView {
         HBox outras = new HBox(12,
                 criarCardMissoes(),
                 criarCardAgenda(),
-                criarCardEmBreve("ESTOQUE", "Itens e quantidades.", "estoque"));
+                criarCardEstoque());
         for (var card : outras.getChildren()) HBox.setHgrow(card, Priority.ALWAYS);
 
         VBox root = new VBox(16, topo, outras, criarBlocoXP());
@@ -102,13 +102,19 @@ public class HomeView {
         return linha;
     }
 
-    private VBox criarCardEmBreve(String titulo, String descricao, String tela) {
-        Label texto = new Label(descricao);
-        texto.getStyleClass().add("form-label");
-        texto.setWrapText(true);
-        Label selo = new Label("EM BREVE");
-        selo.getStyleClass().add("selo-em-breve");
-        return cardAba(titulo, new VBox(8, texto, selo), "Abrir " + titulo.charAt(0) + titulo.substring(1).toLowerCase(), tela);
+    /** Estoque: quantos produtos e quais acabaram. */
+    private VBox criarCardEstoque() {
+        List<Produto> produtos = new Estoque(ui.Sessao.usuario().getId()).listar();
+        List<Produto> zerados = produtos.stream().filter(Produto::semEstoque).toList();
+        VBox linhas = new VBox(6,
+                linhaNumero("Produtos cadastrados", produtos.size(), Ui.COR_INVESTIMENTO),
+                linhaNumero("Sem estoque", zerados.size(), zerados.isEmpty() ? Ui.COR_RECEITA : Ui.COR_DESPESA));
+        for (Produto p : zerados.stream().limit(3).toList()) {
+            Label l = new Label("• " + p.descricao());
+            l.getStyleClass().add("form-label");
+            linhas.getChildren().add(l);
+        }
+        return cardAba("ESTOQUE", linhas, "Abrir Estoque", "estoque");
     }
 
     /** Card com botão que leva à aba {@code tela}. */
