@@ -16,7 +16,7 @@
         <junit.version>5.10.2</junit.version>
         <jacoco.version>0.8.11</jacoco.version>
         <testfx.version>4.0.18</testfx.version>
-        <spotbugs.version>4.10.4.1</spotbugs.version>
+        <spotbugs.version>4.10.5.0</spotbugs.version>
         <testfx.headless>true</testfx.headless>
         <glass.platform>Monocle</glass.platform>
         <main.class>ui.Launcher</main.class>
@@ -93,7 +93,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.6.0</version>
+                <version>3.6.1</version>
                 <configuration>
                     <includes>
                         <include>**/*Test.java</include>
