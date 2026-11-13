@@ -66,6 +66,9 @@ public final class CalculadoraXp {
         receitas.forEach(r -> saldoPorMes.merge(YearMonth.from(r.getData()), r.getValor(), BigDecimal::add));
         despesas.forEach(d -> saldoPorMes.merge(YearMonth.from(d.getData()), d.getValor().negate(), BigDecimal::add));
         investimentos.forEach(i -> saldoPorMes.merge(YearMonth.from(i.getData()), i.getValor().negate(), BigDecimal::add));
+        // no resgate, o aplicado volta para o mês do resgate (o lucro ou prejuízo já é receita ou despesa)
+        investimentos.stream().filter(Investimento::isResgatado)
+                .forEach(i -> saldoPorMes.merge(YearMonth.from(i.getDataResgate()), i.getValor(), BigDecimal::add));
 
         YearMonth mesAtual = YearMonth.from(hoje);
         for (Map.Entry<YearMonth, BigDecimal> e : saldoPorMes.entrySet())

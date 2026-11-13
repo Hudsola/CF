@@ -9,6 +9,8 @@ public class ResumoMensal {
     private final String mes;
     private BigDecimal receita = Dinheiro.ZERO;
     private BigDecimal investimentos = Dinheiro.ZERO;
+    /** Valor aplicado que voltou ao disponível em resgates no mês. */
+    private BigDecimal resgatados = Dinheiro.ZERO;
     private BigDecimal despesaTotal = Dinheiro.ZERO;
     private BigDecimal saldo = Dinheiro.ZERO;
     private BigDecimal saldoAcumulado = Dinheiro.ZERO;
@@ -22,6 +24,8 @@ public class ResumoMensal {
     public void setReceita(BigDecimal v)        { receita = v; }
     public BigDecimal getInvestimentos()        { return investimentos; }
     public void setInvestimentos(BigDecimal v)  { investimentos = v; }
+    public BigDecimal getResgatados()           { return resgatados; }
+    public void setResgatados(BigDecimal v)     { resgatados = v; }
     public BigDecimal getDespesaTotal()         { return despesaTotal; }
     public void setDespesaTotal(BigDecimal v)   { despesaTotal = v; }
     public BigDecimal getSaldo()                { return saldo; }
@@ -35,6 +39,6 @@ public class ResumoMensal {
     }
 
     public boolean temMovimento() {
-        return receita.signum() != 0 || investimentos.signum() != 0 || despesaTotal.signum() != 0;
+        return receita.signum() != 0 || investimentos.signum() != 0 || resgatados.signum() != 0 || despesaTotal.signum() != 0;
     }
 }

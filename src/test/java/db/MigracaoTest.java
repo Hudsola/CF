@@ -211,6 +211,45 @@ class MigracaoTest {
     }
 
     @Test
+    void deveMigrarDaVersao6ParaAVersao7ComResgateERemoverOEstoque() throws Exception {
+        Path arquivo = dir.resolve("mycareer.db");
+        DatabaseManager.setUrl("jdbc:sqlite:" + arquivo);
+        DatabaseManager.inicializar();
+        int usuario = new UsuarioRepository().criar("Ana", "ana", "ana@x.com", null, "hash", null);
+        new repository.ContaRepository(usuario).salvar(new model.Conta("Nubank"));
+        int conta = new repository.ContaRepository(usuario).listarTodos().get(0).getId();
+        // volta para a estrutura da v6: investimentos sem resgate e a tabela produtos do Estoque
+        try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + arquivo);
+             Statement s = c.createStatement()) {
+            s.execute("DROP INDEX idx_investimentos_data");
+            s.execute("DROP TABLE investimentos");
+            s.execute("CREATE TABLE investimentos (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT NOT NULL, valor REAL NOT NULL, "
+                    + "conta_id INTEGER NOT NULL REFERENCES contas(id), data TEXT NOT NULL)");
+            s.execute("INSERT INTO investimentos (id, tipo, valor, conta_id, data) VALUES (3, 'CDB', 7000, " + conta + ", '2026-10-01')");
+            s.execute("CREATE TABLE produtos (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER NOT NULL, codigo TEXT NOT NULL, "
+                    + "descricao TEXT NOT NULL, quantidade TEXT NOT NULL DEFAULT '0', unidade TEXT NOT NULL)");
+            s.execute("INSERT INTO produtos (usuario_id, codigo, descricao, unidade) VALUES (" + usuario + ", 'P0001', 'Leite', 'UN')");
+            s.execute("PRAGMA user_version = 6");
+        }
+
+        DatabaseManager.inicializar();
+
+        var investimento = new repository.InvestimentoRepository(usuario).listarTodos().get(0);
+        assertEquals(3, investimento.getId());
+        assertFalse(investimento.isResgatado(), "investimentos antigos continuam guardados");
+        try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + arquivo);
+             ResultSet rs = c.createStatement().executeQuery("SELECT 1 FROM sqlite_master WHERE type='table' AND name='produtos'")) {
+            assertFalse(rs.next(), "a tabela do Estoque foi removida");
+        }
+        new service.ControleFinanceiro(usuario).resgatarInvestimento(3, java.time.LocalDate.of(2026, 10, 31), new java.math.BigDecimal("5000"));
+        assertTrue(new repository.InvestimentoRepository(usuario).listarTodos().get(0).isResgatado());
+        try (Stream<Path> arquivos = Files.list(dir)) {
+            assertEquals(1, arquivos.filter(p -> p.getFileName().toString().startsWith("mycareer-backup-v6-")).count(),
+                    "backup antes de apagar o Estoque");
+        }
+    }
+
+    @Test
     void bancoNovoJaNasceNaVersaoAtual() throws Exception {
         Path arquivo = dir.resolve("novo.db");
         DatabaseManager.setUrl("jdbc:sqlite:" + arquivo);

@@ -121,14 +121,92 @@ public class ControleFinanceiro {
         investRepo.salvar(i);
     }
 
+    /** Um investimento já resgatado não pode ser alterado: o lucro ou prejuízo dependem do valor aplicado. */
     public void atualizarInvestimento(Investimento i) {
         validarLancamento(i.getTipo(), "Tipo", i.getValor(), i.getData());
         exigirConta(i.getContaId());
+        if (buscarInvestimento(i.getId()).isResgatado())
+            throw new IllegalArgumentException("Este investimento já foi resgatado. Desfaça o resgate antes de alterar.");
         investRepo.atualizar(i);
     }
 
-    public void excluirInvestimento(int id)        { investRepo.excluir(id); }
+    /** Exclui o investimento e, se ele já foi resgatado, o lançamento de lucro ou prejuízo do resgate. */
+    public void excluirInvestimento(int id) {
+        Investimento i = buscarInvestimento(id);
+        apagarResultado(i);
+        investRepo.excluir(id);
+    }
+
     public List<Investimento> getInvestimentos()   { return investRepo.listarTodos(); }
+
+    /** Nome da categoria em que o prejuízo de um resgate é lançado (criada se o usuário ainda não tiver). */
+    public static final String CATEGORIA_INVESTIMENTOS = "Investimentos";
+
+    /**
+     * Resgata o investimento inteiro. O valor aplicado volta para o disponível (devolução, não é renda) e só a
+     * diferença vira lançamento, na mesma conta e na data do resgate: lucro como receita ou prejuízo como despesa
+     * (categoria {@value #CATEGORIA_INVESTIMENTOS}). Sem diferença, nada é lançado.
+     *
+     * @return o lucro (positivo), o prejuízo (negativo) ou zero
+     */
+    public BigDecimal resgatarInvestimento(int id, LocalDate data, BigDecimal valorSacado) {
+        Investimento i = buscarInvestimento(id);
+        if (i.isResgatado()) throw new IllegalArgumentException("Este investimento já foi resgatado.");
+        if (data == null) throw new IllegalArgumentException("Informe a data do resgate.");
+        if (data.isBefore(i.getData())) throw new IllegalArgumentException("O resgate não pode ser antes da aplicação.");
+        if (data.isAfter(LocalDate.now())) throw new IllegalArgumentException("O resgate não pode ser numa data futura.");
+        if (valorSacado == null || valorSacado.signum() < 0)
+            throw new IllegalArgumentException("Informe o valor sacado (zero ou mais).");
+        BigDecimal sacado = Dinheiro.arredondar(valorSacado);
+        BigDecimal resultado = sacado.subtract(i.getValor());
+
+        Integer receitaId = null, despesaId = null;
+        if (resultado.signum() > 0)
+            receitaId = receitaRepo.salvar(new Receita("Lucro do investimento: " + i.getTipo(), resultado, i.getContaId(), data));
+        else if (resultado.signum() < 0)
+            despesaId = despesaRepo.salvar(new Despesa(categoriaInvestimentos(), "Prejuízo do investimento: " + i.getTipo(),
+                    resultado.negate(), i.getContaId(), data));
+        try {
+            investRepo.registrarResgate(id, data, sacado, receitaId, despesaId);
+        } catch (RuntimeException e) {
+            // não deixa um lucro ou prejuízo lançado sem o resgate gravado
+            if (receitaId != null) receitaRepo.excluir(receitaId);
+            if (despesaId != null) despesaRepo.excluir(despesaId);
+            throw e;
+        }
+        return resultado;
+    }
+
+    /** Desfaz o resgate: apaga o lançamento de lucro ou prejuízo e o investimento volta a ficar guardado. */
+    public void desfazerResgate(int id) {
+        Investimento i = buscarInvestimento(id);
+        if (!i.isResgatado()) throw new IllegalArgumentException("Este investimento não foi resgatado.");
+        apagarResultado(i);
+        investRepo.limparResgate(id);
+    }
+
+    private Investimento buscarInvestimento(int id) {
+        return getInvestimentos().stream().filter(x -> x.getId() == id).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Investimento não encontrado."));
+    }
+
+    /** Apaga o lançamento de resultado do resgate, se ainda existir (o usuário pode tê-lo excluído à mão). */
+    private void apagarResultado(Investimento i) {
+        if (i.getReceitaResultadoId() != null && getReceitas().stream().anyMatch(r -> r.getId() == i.getReceitaResultadoId()))
+            receitaRepo.excluir(i.getReceitaResultadoId());
+        if (i.getDespesaResultadoId() != null && getDespesas().stream().anyMatch(d -> d.getId() == i.getDespesaResultadoId()))
+            despesaRepo.excluir(i.getDespesaResultadoId());
+    }
+
+    /** Id da categoria {@value #CATEGORIA_INVESTIMENTOS} do usuário, criando-a se não existir. */
+    private int categoriaInvestimentos() {
+        return getCategorias().stream().filter(c -> c.getNome().equalsIgnoreCase(CATEGORIA_INVESTIMENTOS)).findFirst()
+                .orElseGet(() -> {
+                    categoriaRepo.salvar(new Categoria(CATEGORIA_INVESTIMENTOS));
+                    return getCategorias().stream().filter(c -> c.getNome().equalsIgnoreCase(CATEGORIA_INVESTIMENTOS))
+                            .findFirst().orElseThrow();
+                }).getId();
+    }
 
     // --- Lançamentos Fixos ---
 
@@ -196,7 +274,8 @@ public class ControleFinanceiro {
         return new TotaisPeriodo(
                 somar(receitaRepo.listarPorPeriodo(p), Receita::getValor),
                 somar(despesaRepo.listarPorPeriodo(p), Despesa::getValor),
-                somar(investRepo.listarPorPeriodo(p), Investimento::getValor));
+                somar(investRepo.listarPorPeriodo(p), Investimento::getValor),
+                somar(investRepo.listarResgatadosNoPeriodo(p), Investimento::getValor));
     }
 
     /** Saldo geral: soma dos saldos de todas as contas (saldos iniciais + todos os lançamentos). */
@@ -204,30 +283,41 @@ public class ControleFinanceiro {
         return saldosPorConta().stream().map(SaldoConta::saldo).reduce(Dinheiro.ZERO, BigDecimal::add);
     }
 
-    /** Saldo atual de cada conta: saldo inicial + receitas − despesas − investimentos de todo o histórico. */
+    /** Saldo atual de cada conta: saldo inicial + receitas − despesas − aplicado + resgatado, de todo o histórico. */
     public List<SaldoConta> saldosPorConta() {
-        return montarSaldos(getReceitas(), getDespesas(), getInvestimentos(), true);
+        List<Investimento> todos = getInvestimentos();
+        return montarSaldos(getReceitas(), getDespesas(), todos,
+                todos.stream().filter(Investimento::isResgatado).toList(), true);
+    }
+
+    /** Quanto está guardado em investimentos (aplicações ainda não resgatadas). */
+    public BigDecimal guardadoEmInvestimentos() {
+        return somar(getInvestimentos().stream().filter(i -> !i.isResgatado()).toList(), Investimento::getValor);
     }
 
     /** Movimento de cada conta no ano (ou mês) — sem saldo inicial; contas sem lançamentos no período ficam de fora. */
     public List<SaldoConta> movimentoPorConta(int ano, String mes) {
         Periodo p = Periodo.de(ano, mes);
         return montarSaldos(receitaRepo.listarPorPeriodo(p), despesaRepo.listarPorPeriodo(p),
-                investRepo.listarPorPeriodo(p), false).stream()
-                .filter(s -> s.receitas().signum() != 0 || s.despesas().signum() != 0 || s.investimentos().signum() != 0)
+                investRepo.listarPorPeriodo(p), investRepo.listarResgatadosNoPeriodo(p), false).stream()
+                .filter(s -> s.receitas().signum() != 0 || s.despesas().signum() != 0 || s.investimentos().signum() != 0
+                        || s.resgatados().signum() != 0)
                 .toList();
     }
 
-    private List<SaldoConta> montarSaldos(List<Receita> receitas, List<Despesa> despesas,
-                                          List<Investimento> investimentos, boolean comSaldoInicial) {
+    /** @param resgatados investimentos cujo aplicado voltou para a conta (pela data do resgate) */
+    private List<SaldoConta> montarSaldos(List<Receita> receitas, List<Despesa> despesas, List<Investimento> investimentos,
+                                          List<Investimento> resgatados, boolean comSaldoInicial) {
         Map<Integer, BigDecimal> rec = somarPorConta(receitas, Receita::getContaId, Receita::getValor);
         Map<Integer, BigDecimal> desp = somarPorConta(despesas, Despesa::getContaId, Despesa::getValor);
         Map<Integer, BigDecimal> inv = somarPorConta(investimentos, Investimento::getContaId, Investimento::getValor);
+        Map<Integer, BigDecimal> res = somarPorConta(resgatados, Investimento::getContaId, Investimento::getValor);
         return getContas().stream().map(c -> new SaldoConta(c,
                         comSaldoInicial ? c.getSaldoInicial() : Dinheiro.ZERO,
                         rec.getOrDefault(c.getId(), Dinheiro.ZERO),
                         desp.getOrDefault(c.getId(), Dinheiro.ZERO),
-                        inv.getOrDefault(c.getId(), Dinheiro.ZERO)))
+                        inv.getOrDefault(c.getId(), Dinheiro.ZERO),
+                        res.getOrDefault(c.getId(), Dinheiro.ZERO)))
                 .toList();
     }
 
@@ -250,11 +340,13 @@ public class ControleFinanceiro {
         return agruparOrdenado(investRepo.listarPorPeriodo(Periodo.de(ano, mes)), Investimento::getTipo, Investimento::getValor);
     }
 
-    /** Doze resumos (janeiro a dezembro) com saldo e saldo acumulado; faz 3 consultas ao banco. */
+    /** Doze resumos (janeiro a dezembro) com saldo e saldo acumulado; faz 4 consultas ao banco. */
     public List<ResumoMensal> gerarResumoAnual(int ano) {
         Periodo p = Periodo.doAno(ano);
         Map<Integer, BigDecimal> rec = somarPorMes(receitaRepo.listarPorPeriodo(p), Receita::getData, Receita::getValor);
         Map<Integer, BigDecimal> inv = somarPorMes(investRepo.listarPorPeriodo(p), Investimento::getData, Investimento::getValor);
+        Map<Integer, BigDecimal> res = somarPorMes(investRepo.listarResgatadosNoPeriodo(p), Investimento::getDataResgate,
+                Investimento::getValor);
         List<Despesa> despesas = despesaRepo.listarPorPeriodo(p);
         Map<Integer, BigDecimal> desp = somarPorMes(despesas, Despesa::getData, Despesa::getValor);
 
@@ -264,8 +356,9 @@ public class ControleFinanceiro {
             ResumoMensal rm = new ResumoMensal(Meses.nome(m));
             rm.setReceita(rec.getOrDefault(m, Dinheiro.ZERO));
             rm.setInvestimentos(inv.getOrDefault(m, Dinheiro.ZERO));
+            rm.setResgatados(res.getOrDefault(m, Dinheiro.ZERO));
             rm.setDespesaTotal(desp.getOrDefault(m, Dinheiro.ZERO));
-            BigDecimal saldo = rm.getReceita().subtract(rm.getDespesaTotal()).subtract(rm.getInvestimentos());
+            BigDecimal saldo = rm.getReceita().subtract(rm.getDespesaTotal()).subtract(rm.getInvestimentos()).add(rm.getResgatados());
             rm.setSaldo(saldo);
             acumulado = acumulado.add(saldo);
             rm.setSaldoAcumulado(acumulado);

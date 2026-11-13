@@ -7,7 +7,6 @@ import javafx.scene.layout.*;
 import model.*;
 import service.CalculadoraXp;
 import service.ControleFinanceiro;
-import service.Estoque;
 import service.Missoes;
 import ui.App;
 import ui.components.Ui;
@@ -30,7 +29,7 @@ public class HomeView {
         HBox outras = new HBox(12,
                 criarCardMissoes(),
                 criarCardAgenda(),
-                criarCardEstoque());
+                criarCardInvestimentos());
         for (var card : outras.getChildren()) HBox.setHgrow(card, Priority.ALWAYS);
 
         VBox root = new VBox(16, topo, outras, criarBlocoXP());
@@ -54,7 +53,8 @@ public class HomeView {
         VBox linhas = new VBox(6,
                 linhaValor("Receitas", t.receitas(), Ui.COR_RECEITA),
                 linhaValor("Despesas", t.despesas(), Ui.COR_DESPESA),
-                linhaValor("Investido", t.investimentos(), Ui.COR_INVESTIMENTO),
+                linhaValor("Aplicado", t.investimentos(), Ui.COR_INVESTIMENTO),
+                linhaValor("Resgatado", t.resgatados(), Ui.COR_INVESTIMENTO),
                 linhaValor("Saldo do mês", t.saldo(), t.saldo().signum() >= 0 ? Ui.COR_RECEITA : Ui.COR_DESPESA));
         return cardAba("FINANÇAS — " + mes, linhas, "Abrir Finanças", "financas");
     }
@@ -102,19 +102,20 @@ public class HomeView {
         return linha;
     }
 
-    /** Estoque: quantos produtos e quais acabaram. */
-    private VBox criarCardEstoque() {
-        List<Produto> produtos = new Estoque(ui.Sessao.usuario().getId()).listar();
-        List<Produto> zerados = produtos.stream().filter(Produto::semEstoque).toList();
+    /** Investimentos: quanto está guardado e o resultado dos resgates do ano. */
+    private VBox criarCardInvestimentos() {
+        List<Investimento> todos = cf.getInvestimentos();
+        long ativos = todos.stream().filter(i -> !i.isResgatado()).count();
+        int ano = LocalDate.now().getYear();
+        java.math.BigDecimal resultado = todos.stream()
+                .filter(i -> i.isResgatado() && i.getDataResgate().getYear() == ano)
+                .map(Investimento::getResultado).reduce(Dinheiro.ZERO, java.math.BigDecimal::add);
         VBox linhas = new VBox(6,
-                linhaNumero("Produtos cadastrados", produtos.size(), Ui.COR_INVESTIMENTO),
-                linhaNumero("Sem estoque", zerados.size(), zerados.isEmpty() ? Ui.COR_RECEITA : Ui.COR_DESPESA));
-        for (Produto p : zerados.stream().limit(3).toList()) {
-            Label l = new Label("• " + p.descricao());
-            l.getStyleClass().add("form-label");
-            linhas.getChildren().add(l);
-        }
-        return cardAba("ESTOQUE", linhas, "Abrir Estoque", "estoque");
+                linhaValor("Guardado", cf.guardadoEmInvestimentos(), Ui.COR_INVESTIMENTO),
+                linhaNumero("Aplicações ativas", (int) ativos, Ui.COR_INVESTIMENTO),
+                linhaValor("Resultado dos resgates em " + ano, resultado,
+                        resultado.signum() >= 0 ? Ui.COR_RECEITA : Ui.COR_DESPESA));
+        return cardAba("INVESTIMENTOS", linhas, "Abrir Finanças", "financas");
     }
 
     /** Card com botão que leva à aba {@code tela}. */

@@ -99,13 +99,14 @@ public class ResumoView {
         atualizarDivisao(divInvest, "Investimentos por Tipo", cf.divisaoInvestimentosPorTipo(ano, mes), Ui.COR_INVESTIMENTO);
     }
 
-    /** Receitas, despesas e investimentos de cada conta no período; resultado = receitas − despesas − investimentos. */
+    /** Movimento de cada conta no período; resultado = receitas − despesas − aplicado + resgatado. */
     private void configurarTabelaContas() {
         tabelaContas.setMinHeight(90);
         tabelaContas.getColumns().add(Ui.colunaTexto("Conta", SaldoConta::getNome, 180));
         tabelaContas.getColumns().add(Ui.colunaValor("Receitas", SaldoConta::receitas, 120, Ui.COR_RECEITA));
         tabelaContas.getColumns().add(Ui.colunaValor("Despesas", SaldoConta::despesas, 120, Ui.COR_DESPESA));
-        tabelaContas.getColumns().add(Ui.colunaValor("Investimentos", SaldoConta::investimentos, 120, Ui.COR_INVESTIMENTO));
+        tabelaContas.getColumns().add(Ui.colunaValor("Aplicado", SaldoConta::investimentos, 120, Ui.COR_INVESTIMENTO));
+        tabelaContas.getColumns().add(Ui.colunaValor("Resgatado", SaldoConta::resgatados, 120, Ui.COR_INVESTIMENTO));
         tabelaContas.getColumns().add(Ui.colunaValor("Resultado", SaldoConta::movimento, 130, null));
     }
 
@@ -115,7 +116,8 @@ public class ResumoView {
         tabela.getColumns().add(Ui.colunaTexto("Mês", ResumoMensal::getMes, 110));
         tabela.getColumns().add(Ui.colunaValor("Receita", ResumoMensal::getReceita, 115, Ui.COR_RECEITA));
         tabela.getColumns().add(Ui.colunaValor("Despesas", ResumoMensal::getDespesaTotal, 115, Ui.COR_DESPESA));
-        tabela.getColumns().add(Ui.colunaValor("Investimentos", ResumoMensal::getInvestimentos, 120, Ui.COR_INVESTIMENTO));
+        tabela.getColumns().add(Ui.colunaValor("Aplicado", ResumoMensal::getInvestimentos, 120, Ui.COR_INVESTIMENTO));
+        tabela.getColumns().add(Ui.colunaValor("Resgatado", ResumoMensal::getResgatados, 120, Ui.COR_INVESTIMENTO));
         tabela.getColumns().add(Ui.colunaValor("Saldo", ResumoMensal::getSaldo, 115, null));
         tabela.getColumns().add(Ui.colunaValor("Saldo Acum.", ResumoMensal::getSaldoAcumulado, 120, null));
 

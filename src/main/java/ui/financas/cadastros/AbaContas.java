@@ -14,7 +14,7 @@ import ui.components.Ui;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** Contas com saldo inicial e saldo atual (saldo inicial + receitas − despesas − investimentos). */
+/** Contas com saldo inicial e saldo atual (saldo inicial + receitas − despesas − aplicado + resgatado). */
 class AbaContas extends AbaFinancas<SaldoConta> {
 
     private final TextField tfNome = Ui.campo("Nome da conta (ex: Nubank, Itaú)");
@@ -45,7 +45,8 @@ class AbaContas extends AbaFinancas<SaldoConta> {
         t.getColumns().add(Ui.colunaValor("Saldo inicial", SaldoConta::saldoInicial, 120, null));
         t.getColumns().add(Ui.colunaValor("Receitas", SaldoConta::receitas, 120, Ui.COR_RECEITA));
         t.getColumns().add(Ui.colunaValor("Despesas", SaldoConta::despesas, 120, Ui.COR_DESPESA));
-        t.getColumns().add(Ui.colunaValor("Investimentos", SaldoConta::investimentos, 120, Ui.COR_INVESTIMENTO));
+        t.getColumns().add(Ui.colunaValor("Aplicado", SaldoConta::investimentos, 120, Ui.COR_INVESTIMENTO));
+        t.getColumns().add(Ui.colunaValor("Resgatado", SaldoConta::resgatados, 120, Ui.COR_INVESTIMENTO));
         t.getColumns().add(Ui.colunaValor("Saldo atual", SaldoConta::saldo, 130, null));
     }
 
@@ -55,7 +56,7 @@ class AbaContas extends AbaFinancas<SaldoConta> {
     protected void aposRecarregar(List<SaldoConta> itens) {
         BigDecimal total = itens.stream().map(SaldoConta::saldo).reduce(Dinheiro.ZERO, BigDecimal::add);
         lblTotal.setText("Saldo de todas as contas: " + Dinheiro.formatar(total)
-                + "   (saldo atual = saldo inicial + receitas − despesas − investimentos)");
+                + "   (saldo atual = saldo inicial + receitas − despesas − aplicado em investimentos + resgatado)");
     }
 
     @Override

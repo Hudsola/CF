@@ -15,7 +15,6 @@ module com.mycareer {
     opens ui.financas.cadastros to javafx.fxml;
     opens ui.financas.resumo to javafx.fxml;
     opens ui.agenda to javafx.fxml;
-    opens ui.estoque to javafx.fxml;
     opens ui.components to javafx.fxml;
     opens model to javafx.base;
 

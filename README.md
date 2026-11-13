@@ -1,12 +1,12 @@
 # MyCareer
 
-Aplicativo desktop em **Java 17 + JavaFX** para organizar a vida pessoal como uma carreira de jogo: missões, finanças, agenda e estoque, com nível e XP. Os dados ficam localmente em **SQLite**. Começou como um controle financeiro que substituía uma planilha de receitas e gastos (o antigo "Controle Financeiro Pessoal").
+Aplicativo desktop em **Java 17 + JavaFX** para organizar a vida pessoal como uma carreira de jogo: missões, finanças e agenda, com nível e XP. Os dados ficam localmente em **SQLite**. Começou como um controle financeiro que substituía uma planilha de receitas e gastos (o antigo "Controle Financeiro Pessoal").
 
 ---
 
 ## Funcionalidades
 
-O app é organizado em abas na barra superior: **Home**, **Missões**, **Finanças**, **Agenda** e **Estoque**.
+O app é organizado em abas na barra superior: **Home**, **Missões**, **Finanças** e **Agenda**.
 
 - **Login**: tela inicial com usuário/e-mail e senha ou **conta Google**; cada usuário só vê os próprios dados (contas, categorias, lançamentos, fixos, importações). Detalhes em [Login e usuários](#login-e-usuários)
 - **Home**: painel do usuário no estilo do HUD do GTA San Andreas (foto de perfil enviada ou da conta Google, nome, idade, barra de XP e saldo geral), um card de resumo por aba (com botão para abri-la) e nível/XP
@@ -20,11 +20,11 @@ O app é organizado em abas na barra superior: **Home**, **Missões**, **Finanç
   - **Sub-missões**: uma missão pode ter sub-missões (um nível só), que são missões completas e herdam a categoria da mãe. As sub-missões **sem prazo são requisitos**: a missão-mãe só pode ser concluída depois deles (ex: *Miojo* requer *água*, *fogo* e *macarrão*). Sub-missões recorrentes são hábitos que ajudam e não bloqueiam (ex: *Aprender inglês* com *Estudar inglês* seg/qua/sex). Excluir a mãe exclui as sub-missões
   - painel de **objetivos e requisitos**: cada objetivo com o progresso (ex: 2/3 requisitos) e caixas de marcar; a da mãe só é liberada depois dos requisitos
 - **Agenda**: calendário do mês com as missões de cada dia (pendentes em dourado, feitas em verde, atrasadas em vermelho); clicar num dia mostra a lista dele, onde também dá para marcar como feita
-- **Estoque**: produtos da casa com **código do MyCareer** (automático P0001, P0002… ou um seu, ex: CARNE-CONTRAFILE: o mesmo produto de lojas diferentes fica com um código só), descrição, **quantidade** e **unidade** (un, caixa, pacote, kg, g, L, ml; peso e volume aceitam frações como 1,028 kg). Busca por código ou descrição, **entrada** (compra) e **saída** (consumo) do produto selecionado sem deixar o estoque negativo, e destaque para o que acabou
 - **Finanças**, com três sub-abas:
   - **Visão geral**: receitas/despesas/saldo do mês atual, **saldo por conta**, gráficos do mês e lançamentos fixos ativos
   - **Cadastros**: todas as abas têm cadastro, **edição** (botão Editar ou duplo clique na linha) e exclusão com confirmação — inclusive de **várias linhas de uma vez** (Ctrl+clique, Shift+clique ou Ctrl+A, e o botão Excluir ou a tecla Delete)
     - **Receitas, Despesas e Investimentos**; despesas com filtro por categoria, mês e ano e total do filtro
+    - **Investimentos**: a aplicação sai do saldo disponível e fica **guardada** (não é despesa). O **resgate** é sempre total: o valor aplicado volta para o disponível e só a diferença para o valor sacado vira lançamento, na data do resgate — **lucro como receita** ou **prejuízo como despesa** (categoria *Investimentos*). Ex: 7.000 aplicados e 5.000 sacados devolvem 7.000 e lançam 2.000 de despesa. O resgate pode ser desfeito (o lançamento de resultado é apagado), e um investimento resgatado não pode ser alterado sem desfazer o resgate
     - **Importar CSV** (aba Despesas): importa extratos/faturas (ex: Nubank `date,title,amount`) com preview editável
       - aceita UTF-8 ou Windows-1252 (CSV salvo pelo Excel), separador `,` ou `;`, datas `aaaa-mm-dd` ou `dd/mm/aaaa` e valores `1.234,56` ou `1234.56`
       - linhas com erro são puladas e listadas, sem cancelar o resto
@@ -36,7 +36,7 @@ O app é organizado em abas na barra superior: **Home**, **Missões**, **Finanç
     - **Contas**: com **saldo inicial** opcional (pode ser negativo) e tabela de saldo atual por conta
   - **Resumo**: % da renda gasta, % investida, saldo do período, tabela mês a mês com saldo acumulado e uma coluna por categoria, **movimento por conta** no período, e divisão por origem, categoria e tipo
 
-Regra de saldo usada em todo o app: **saldo = receitas − despesas − investimentos**. O saldo de cada conta soma o saldo inicial dela: **saldo da conta = saldo inicial + receitas − despesas − investimentos lançados nela** (o investimento conta como saída da conta). O saldo geral é a soma dos saldos das contas.
+Regra de saldo usada em todo o app: **saldo disponível = receitas − despesas − aplicado em investimentos + aplicado devolvido em resgates**. O saldo de cada conta soma o saldo inicial dela: **saldo da conta = saldo inicial + receitas − despesas − aplicado + resgatado** (lançados nela). O saldo geral é a soma dos saldos das contas, e o que está aplicado e ainda não foi resgatado aparece à parte como **guardado em investimentos**.
 
 Valores em dinheiro são calculados com `BigDecimal` (sem erros de arredondamento como `0,1 + 0,2 = 0,30000000000000004`).
 
@@ -98,13 +98,12 @@ src/main/java/
 ├── db/           DatabaseManager — conexão, criação das tabelas e migrações de esquema
 ├── model/        entidades (Receita, Despesa, …) e tipos de apoio (Dinheiro, Periodo, Meses, Progresso)
 ├── repository/   acesso ao banco (SQL)
-├── service/      ControleFinanceiro (fachada financeira por usuário), Missoes, Estoque, Autenticacao, Senhas, GoogleOAuth, ImportacaoCsv, CalculadoraXp, Conversor
+├── service/      ControleFinanceiro (fachada financeira por usuário), Missoes, Autenticacao, Senhas, GoogleOAuth, ImportacaoCsv, CalculadoraXp, Conversor
 └── ui/           App, Launcher, SmokeTest e telas JavaFX (um pacote por aba)
     ├── login/       tela de login/cadastro e fluxo do Google
     ├── home/        Home: painel do usuário (PainelUsuario), cards das abas, XP, perfil e foto
     ├── missoes/     MissoesView, cadastro (AbaMissoes), ListaMissoes (marcar como feita) e PainelObjetivos (requisitos)
     ├── agenda/      AgendaView: calendário do mês e lista do dia
-    ├── estoque/     EstoqueView e AbaProdutos (cadastro, busca, entrada e saída)
     ├── financas/    FinancasView (sub-abas) e VisaoGeralView
     │   ├── cadastros/   uma classe por aba (AbaReceitas, AbaDespesas, …) sobre a base comum AbaCrud
     │   └── resumo/      ResumoView
@@ -175,7 +174,7 @@ O arquivo contém seus dados pessoais e **não é versionado** (está no `.gitig
 | `contas`                | Contas financeiras (ex: Nubank, Carteira)          |
 | `receitas`              | Entradas                                           |
 | `despesas`              | Saídas por categoria                               |
-| `investimentos`         | Aportes                                            |
+| `investimentos`         | Aplicações (guardadas) e, se resgatadas, data, valor sacado e o lançamento de lucro ou prejuízo |
 | `lancamentos_fixos`     | Lançamentos recorrentes                            |
 | `aplicacoes_fixos`      | Em quais meses cada fixo já foi aplicado           |
 | `mapeamentos_descricao` | Regras aprendidas na importação de CSV             |
@@ -183,7 +182,6 @@ O arquivo contém seus dados pessoais e **não é versionado** (está no `.gitig
 | `missoes`               | Missões: título, categoria, missão-mãe, tipo, dias da semana ou do mês, período e conclusão (sem prazo) |
 | `missao_datas`          | Dias escolhidos das missões diárias                |
 | `missao_conclusoes`     | Dias em que cada missão foi cumprida               |
-| `produtos`              | Estoque: código, descrição, quantidade (decimal exato) e unidade |
 
 As chaves estrangeiras são verificadas (`foreign_keys` ligado), então não é possível gravar lançamentos com conta ou categoria inexistente. Valores ficam em colunas `REAL` com 2 casas decimais e datas em texto `aaaa-mm-dd`; o mês e o ano de cada lançamento são derivados da data.
 
@@ -194,6 +192,10 @@ As chaves estrangeiras são verificadas (`foreign_keys` ligado), então não é 
 | 1      | Remove as colunas `mes`/`ano` de receitas, despesas e investimentos (derivadas da data) e as colunas de XP de `usuarios` (XP passou a ser calculado) |
 | 2      | Adiciona `saldo_inicial` em `contas` (zero para as contas existentes)                     |
 | 3      | Login: colunas de acesso em `usuarios`; `usuario_id` em contas, categorias e mapeamentos (nomes únicos por usuário). Os dados existentes ficam com o perfil antigo, que ganha acesso na tela de login |
+| 4      | Missões: tabelas `missoes`, `missao_datas` e `missao_conclusoes`                          |
+| 5      | Missões principais/secundárias e sub-missões: colunas `categoria` e `missao_pai_id` (as existentes viram secundárias) |
+| 6      | Estoque: tabela `produtos` (removida na versão 7)                                          |
+| 7      | Resgate de investimentos: colunas `data_resgate`, `valor_resgatado` e os ids do lançamento de lucro ou prejuízo; remove a tabela `produtos` |
 
 Depois de migrado, o banco não abre mais em versões antigas do app — use o backup se precisar voltar.
 

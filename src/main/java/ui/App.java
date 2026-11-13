@@ -10,7 +10,6 @@ import model.Usuario;
 import ui.agenda.AgendaView;
 import ui.components.NavBar;
 import ui.components.Ui;
-import ui.estoque.EstoqueView;
 import ui.financas.FinancasView;
 import ui.home.HomeView;
 import ui.login.LoginView;
@@ -74,7 +73,7 @@ public class App extends Application {
         navegarPara("home");
     }
 
-    /** Abre uma das abas da barra: home, missoes, financas, agenda ou estoque. */
+    /** Abre uma das abas da barra: home, missoes, financas ou agenda. */
     public static void navegarPara(String tela) {
         if (!Sessao.ativa()) { mostrarLogin(); return; }
         root.setCenter(switch (tela) {
@@ -82,7 +81,6 @@ public class App extends Application {
             case "missoes" -> new MissoesView().getView();
             case "financas" -> new FinancasView().getView();
             case "agenda" -> new AgendaView().getView();
-            case "estoque" -> new EstoqueView().getView();
             default -> throw new IllegalArgumentException("Tela desconhecida: " + tela);
         });
         telaAtual = tela;

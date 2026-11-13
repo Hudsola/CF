@@ -24,13 +24,15 @@ public class ReceitaRepository {
         "FROM receitas r JOIN contas c ON c.id = r.conta_id " +
         "WHERE c.usuario_id = ? ";
 
-    public void salvar(Receita r) {
+    /** Grava a receita e devolve o id gerado. */
+    public int salvar(Receita r) {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                 "INSERT INTO receitas (origem, valor, conta_id, data) VALUES (?,?,?,?)")) {
+                 "INSERT INTO receitas (origem, valor, conta_id, data) VALUES (?,?,?,?)", Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, r.getOrigem()); ps.setDouble(2, r.getValor().doubleValue());
             ps.setInt(3, r.getContaId()); ps.setString(4, r.getData().toString());
             ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) { rs.next(); return rs.getInt(1); }
         } catch (SQLException e) { throw new RuntimeException("Erro ao salvar receita: " + e.getMessage(), e); }
     }
 

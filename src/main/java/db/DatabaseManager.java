@@ -33,7 +33,7 @@ public class DatabaseManager {
     private static final Object TRAVA_ARQUIVO = new Object();
 
     /** Versão do esquema gravada em PRAGMA user_version. Suba ao criar uma nova migração. */
-    static final int VERSAO_ESQUEMA = 6;
+    static final int VERSAO_ESQUEMA = 7;
 
     /** Permite injetar URL customizada (ex: :memory: para testes). */
     public static void setUrl(String url) { customUrl = url; }
@@ -181,7 +181,11 @@ public class DatabaseManager {
                     tipo      TEXT    NOT NULL,
                     valor     REAL    NOT NULL,
                     conta_id  INTEGER NOT NULL REFERENCES contas(id),
-                    data      TEXT    NOT NULL
+                    data      TEXT    NOT NULL,
+                    data_resgate         TEXT,
+                    valor_resgatado      REAL,
+                    receita_resultado_id INTEGER,
+                    despesa_resultado_id INTEGER
                 )
             """);
 
@@ -255,19 +259,6 @@ public class DatabaseManager {
                 )
             """);
 
-            // Estoque (v6): produtos da casa; a quantidade é texto decimal exato (ex: "1.028").
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS produtos (
-                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                    usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
-                    codigo     TEXT    NOT NULL COLLATE NOCASE,
-                    descricao  TEXT    NOT NULL,
-                    quantidade TEXT    NOT NULL DEFAULT '0',
-                    unidade    TEXT    NOT NULL,
-                    UNIQUE(usuario_id, codigo)
-                )
-            """);
-
             migrar(conn);
 
             // Login: usuário, e-mail e conta Google não podem se repetir (vários NULL são permitidos).
@@ -311,7 +302,8 @@ public class DatabaseManager {
         boolean alteraV2 = versao < 2 && !temColuna(conn, "contas", "saldo_inicial");
         boolean alteraV3 = versao < 3 && !temColuna(conn, "contas", "usuario_id");
         boolean alteraV5 = versao < 5 && !temColuna(conn, "missoes", "categoria");
-        if (alteraV1 || alteraV2 || alteraV3 || alteraV5) fazerBackup(versao);
+        boolean alteraV7 = versao < 7 && (!temColuna(conn, "investimentos", "data_resgate") || existeTabela(conn, "produtos"));
+        if (alteraV1 || alteraV2 || alteraV3 || alteraV5 || alteraV7) fazerBackup(versao);
 
         // Recriar tabelas referenciadas por outras (contas, categorias) exige desligar a checagem de
         // chaves estrangeiras durante a troca; ela é refeita com PRAGMA foreign_key_check antes do commit.
@@ -332,7 +324,16 @@ public class DatabaseManager {
                 stmt.execute("ALTER TABLE contas ADD COLUMN saldo_inicial REAL NOT NULL DEFAULT 0");
             }
             if (alteraV3) migrarParaV3(stmt, conn);
-            // v4 (missões) e v6 (estoque): só tabelas novas, já criadas em inicializar(); não há dados a converter.
+            // v4 (missões): só tabelas novas, já criadas em inicializar(); não há dados a converter.
+            // v6 criou a tabela produtos (Estoque), removida na v7.
+            if (alteraV7) {
+                // v7: resgate de investimentos (o aplicado volta e só o lucro ou prejuízo vira lançamento); sem Estoque.
+                for (String coluna : List.of("data_resgate TEXT", "valor_resgatado REAL", "receita_resultado_id INTEGER",
+                        "despesa_resultado_id INTEGER"))
+                    if (!temColuna(conn, "investimentos", coluna.substring(0, coluna.indexOf(' '))))
+                        stmt.execute("ALTER TABLE investimentos ADD COLUMN " + coluna);
+                stmt.execute("DROP TABLE IF EXISTS produtos");
+            }
             if (alteraV5) {
                 // v5: missões principais/secundárias e sub-missões; as missões existentes viram secundárias.
                 stmt.execute("ALTER TABLE missoes ADD COLUMN categoria TEXT NOT NULL DEFAULT 'SECUNDARIA'");
@@ -408,6 +409,13 @@ public class DatabaseManager {
                 + "SELECT id, 1, padrao, categoria_id, detalhe FROM mapeamentos_descricao");
         stmt.execute("DROP TABLE mapeamentos_descricao");
         stmt.execute("ALTER TABLE mapeamentos_v3 RENAME TO mapeamentos_descricao");
+    }
+
+    private static boolean existeTabela(Connection conn, String tabela) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?")) {
+            ps.setString(1, tabela);
+            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
+        }
     }
 
     private static boolean temColuna(Connection conn, String tabela, String coluna) throws SQLException {

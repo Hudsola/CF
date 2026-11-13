@@ -2,12 +2,23 @@ package model;
 
 import java.math.BigDecimal;
 
-/** Somas de um período e os indicadores derivados delas. */
-public record TotaisPeriodo(BigDecimal receitas, BigDecimal despesas, BigDecimal investimentos) {
+/**
+ * Somas de um período e os indicadores derivados delas.
+ *
+ * @param investimentos valor aplicado no período (sai do disponível e fica guardado)
+ * @param resgatados    valor aplicado que voltou ao disponível por resgates no período (devolução, não é renda);
+ *                      o lucro ou prejuízo do resgate já está em {@code receitas} ou {@code despesas}
+ */
+public record TotaisPeriodo(BigDecimal receitas, BigDecimal despesas, BigDecimal investimentos, BigDecimal resgatados) {
 
-    /** Saldo em conta: receitas − despesas − investimentos. */
+    /** Sem resgates no período. */
+    public TotaisPeriodo(BigDecimal receitas, BigDecimal despesas, BigDecimal investimentos) {
+        this(receitas, despesas, investimentos, Dinheiro.ZERO);
+    }
+
+    /** Variação do saldo disponível: receitas − despesas − aplicado + resgatado. */
     public BigDecimal saldo() {
-        return receitas.subtract(despesas).subtract(investimentos);
+        return receitas.subtract(despesas).subtract(investimentos).add(resgatados);
     }
 
     /** Fração da renda gasta em despesas (0.25 = 25%). */

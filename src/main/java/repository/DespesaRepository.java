@@ -28,20 +28,23 @@ public class DespesaRepository {
         "JOIN contas c ON c.id = d.conta_id " +
         "WHERE c.usuario_id = ? ";
 
-    public void salvar(Despesa d) {
+    /** Grava a despesa e devolve o id gerado. */
+    public int salvar(Despesa d) {
         try (Connection conn = DatabaseManager.getConnection()) {
-            salvar(conn, d);
+            return salvar(conn, d);
         } catch (SQLException e) { throw new RuntimeException("Erro ao salvar despesa: " + e.getMessage(), e); }
     }
 
     /** Salva usando uma conexão já aberta (permite agrupar vários inserts numa transação). */
-    public void salvar(Connection conn, Despesa d) throws SQLException {
+    public int salvar(Connection conn, Despesa d) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(
-                 "INSERT INTO despesas (categoria_id, detalhamento, valor, conta_id, data) VALUES (?,?,?,?,?)")) {
+                 "INSERT INTO despesas (categoria_id, detalhamento, valor, conta_id, data) VALUES (?,?,?,?,?)",
+                 Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, d.getCategoriaId()); ps.setString(2, d.getDetalhamento());
             ps.setDouble(3, d.getValor().doubleValue()); ps.setInt(4, d.getContaId());
             ps.setString(5, d.getData().toString());
             ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) { rs.next(); return rs.getInt(1); }
         }
     }
 

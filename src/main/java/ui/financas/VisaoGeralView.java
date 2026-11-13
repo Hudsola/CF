@@ -49,9 +49,11 @@ public class VisaoGeralView {
         BigDecimal saldo = mes.saldo();
         VBox cardSaldo = criarCard("SALDO" + sufixo, Dinheiro.formatar(saldo),
                 saldo.signum() >= 0 ? Ui.COR_RECEITA : Ui.COR_DESPESA,
-                "Investido: " + Dinheiro.formatar(mes.investimentos()));
+                "Aplicado: " + Dinheiro.formatar(mes.investimentos()) + "  ·  Resgatado: " + Dinheiro.formatar(mes.resgatados()));
+        VBox cardGuardado = criarCard("GUARDADO EM INVESTIMENTOS", Dinheiro.formatar(cf.guardadoEmInvestimentos()),
+                Ui.COR_INVESTIMENTO, "Aplicações ainda não resgatadas");
 
-        HBox linha = new HBox(12, cardReceitas, cardDespesas, cardSaldo);
+        HBox linha = new HBox(12, cardReceitas, cardDespesas, cardSaldo, cardGuardado);
         for (var card : linha.getChildren()) HBox.setHgrow(card, Priority.ALWAYS);
         linha.setAlignment(Pos.CENTER_LEFT);
         return linha;
@@ -111,7 +113,8 @@ public class VisaoGeralView {
         tabela.getColumns().add(Ui.colunaValor("Saldo inicial", SaldoConta::saldoInicial, 120, null));
         tabela.getColumns().add(Ui.colunaValor("Receitas", SaldoConta::receitas, 120, Ui.COR_RECEITA));
         tabela.getColumns().add(Ui.colunaValor("Despesas", SaldoConta::despesas, 120, Ui.COR_DESPESA));
-        tabela.getColumns().add(Ui.colunaValor("Investimentos", SaldoConta::investimentos, 120, Ui.COR_INVESTIMENTO));
+        tabela.getColumns().add(Ui.colunaValor("Aplicado", SaldoConta::investimentos, 120, Ui.COR_INVESTIMENTO));
+        tabela.getColumns().add(Ui.colunaValor("Resgatado", SaldoConta::resgatados, 120, Ui.COR_INVESTIMENTO));
         tabela.getColumns().add(Ui.colunaValor("Saldo atual", SaldoConta::saldo, 130, null));
         List<SaldoConta> saldos = cf.saldosPorConta();
         tabela.getItems().setAll(saldos);

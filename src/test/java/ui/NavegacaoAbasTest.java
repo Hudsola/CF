@@ -18,11 +18,11 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Estrutura do app em abas: Home, Missões, Finanças, Agenda e Estoque. */
+/** Estrutura do app em abas: Home, Missões, Finanças e Agenda. */
 class NavegacaoAbasTest extends TelaTestBase {
 
     private static final Map<String, String> ABAS = Map.of(
-            "home", "HOME", "missoes", "MISSÕES", "financas", "FINANÇAS", "agenda", "AGENDA", "estoque", "ESTOQUE");
+            "home", "HOME", "missoes", "MISSÕES", "financas", "FINANÇAS", "agenda", "AGENDA");
 
     private Usuario usuario;
 
@@ -42,12 +42,12 @@ class NavegacaoAbasTest extends TelaTestBase {
     }
 
     @Test
-    void barraTemAsCincoAbasNaOrdemEAbreNaHome() {
-        assertEquals(List.of("home", "missoes", "financas", "agenda", "estoque"), List.copyOf(NavBar.ABAS.keySet()));
+    void barraTemAsQuatroAbasNaOrdemEAbreNaHome() {
+        assertEquals(List.of("home", "missoes", "financas", "agenda"), List.copyOf(NavBar.ABAS.keySet()));
         NavBar barra = (NavBar) exigir(n -> n instanceof NavBar, "barra de navegação");
         List<String> textos = barra.getChildren().stream()
                 .filter(n -> n.getStyleClass().contains("nav-button")).map(n -> ((Button) n).getText()).toList();
-        assertEquals(List.of("HOME", "MISSÕES", "FINANÇAS", "AGENDA", "ESTOQUE"), textos);
+        assertEquals(List.of("HOME", "MISSÕES", "FINANÇAS", "AGENDA"), textos);
         assertEquals("home", App.telaAtual());
         assertEquals(List.of("HOME"), ativos());
     }
@@ -64,11 +64,11 @@ class NavegacaoAbasTest extends TelaTestBase {
     @Test
     void nenhumaAbaEstaMaisEmBreve() {
         assertFalse(temTexto("EM BREVE"), "Home");
-        for (String aba : new String[]{"MISSÕES", "FINANÇAS", "AGENDA", "ESTOQUE"}) {
+        for (String aba : new String[]{"MISSÕES", "FINANÇAS", "AGENDA"}) {
             clicar(aba);
             assertFalse(temTexto("EM BREVE"), aba + " já tem funcionalidades");
         }
-        assertTrue(temTexto("Estoque da casa"));
+        assertFalse(temTexto("ESTOQUE"), "a aba Estoque foi removida");
     }
 
     @Test
@@ -83,7 +83,7 @@ class NavegacaoAbasTest extends TelaTestBase {
     @Test
     void homeTemUmCardPorAbaQueLevaAteEla() {
         for (String[] card : new String[][]{{"Abrir Finanças →", "financas"}, {"Abrir Missões →", "missoes"},
-                {"Abrir Agenda →", "agenda"}, {"Abrir Estoque →", "estoque"}}) {
+                {"Abrir Agenda →", "agenda"}}) {
             clicar("HOME");
             clicar(card[0]);
             assertEquals(card[1], App.telaAtual());

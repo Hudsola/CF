@@ -32,7 +32,6 @@ public class NavBar extends HBox {
         m.put("missoes", "MISSÕES");
         m.put("financas", "FINANÇAS");
         m.put("agenda", "AGENDA");
-        m.put("estoque", "ESTOQUE");
         return Collections.unmodifiableMap(m);
     }
 
